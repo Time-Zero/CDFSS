@@ -1,0 +1,7 @@
+{
+  "dataset":
+  {
+    "path": "E:\\毕设\\训练数据\\mini-imagenet",
+    "pretreatment": true
+  }
+}
