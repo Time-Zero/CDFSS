@@ -4,7 +4,14 @@ from util.tools.singleton import *
 
 @singleton
 class ConfigReader:
+    """
+    用于读取配置文件的单例类
+    """
     def __init__(self, config_path: str):
+        """
+        配置文件读取类的初始化函数
+        :param config_path: 配置文件路径
+        """
         self.config_path = config_path
         self.config_data_dict = None
 
