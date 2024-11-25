@@ -1,11 +1,14 @@
+import copy
 import sys
-
+import time
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from torch import optim, nn
 import torchvision
 from PIL import Image
+from torch.optim import lr_scheduler
+from torch.utils.data import dataloader
 from tqdm import tqdm
 
 # 标签中每个RGB颜色的值
@@ -133,6 +136,106 @@ class VOCSegDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.feature)
 
+def bilinear_kernel(in_channels, out_channels, kernel_size):
+    """
+    使用双线性插值的上采样，用来初始化转置卷积层的卷积核
+    :param in_channels: 输入通道数
+    :param out_channels: 输出通道数
+    :param kernel_size: 卷积核的F
+    :return: 使用双线性插值的卷积核
+    """
+    # factor
+    # 是卷积核的中心点。如果
+    # kernel_size
+    # 是奇数，中心点在卷积核的中间；如果
+    # kernel_size
+    # 是偶数，中心点在卷积核的中间偏下。
+    factor = kernel_size // 2
+    if kernel_size % 2 == 1:
+        factor -= 1
+    else:
+        factor -= 0.5
+
+    # 创建一个网格，用来生成滤波器
+    og = np.ogrid[:kernel_size, :kernel_size]
+    filt = (1 - abs(og[0] - factor) / factor ) * (1 - abs(og[1] - factor) / factor)
+    weight = np.zeros((in_channels, out_channels, kernel_size, kernel_size), dtype='float32')
+    weight[range(in_channels), range(out_channels), :, :] = filt
+    weight = torch.Tensor(weight)
+    weight.requires_grad = True
+    return weight
+
+def train_model(model:nn.Module, criterion, optimizer, scheduler, num_epochs=20):
+    since = time.time()
+    best_model_wts = model.state_dict()
+    best_acc = 0.0
+
+    for epoch in range(num_epochs):
+        print('Epoch {}/{}'.format(epoch + 1, num_epochs))
+        print('-' * 10)
+        for phase in ['train', 'val']:
+            if phase == 'train':
+                scheduler.step()
+                model.train()
+            else:
+                model.eval()
+            runing_loss = 0.0
+            runing_correct = 0.0
+            for inputs, labels in dataloader[phase]:
+                inputs, labels = inputs.to(device), labels.to(device)
+                optimizer.zero_grad()
+
+                with torch.set_grad_enabled(phase == 'train'):
+                    logits = model(inputs)
+                    loss = criterion(logits, labels.long())
+
+                    if phase == 'train':
+                        loss.backward()
+                        optimizer.step()
+
+                runing_loss += loss.item() * inputs.size(0)
+                runing_correct += torch.sum((torch.argmax(logits.data,1)) == labels.data) / (480 * 320)
+
+            epoch_loss = runing_loss / dataset_sizes[phase]
+            epoch_acc = runing_correct.double() / dataset_sizes[phase]
+            print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
+            if phase == 'val' and epoch_acc > best_acc:
+                best_acc = epoch_acc
+                best_model_wts = copy.deepcopy(model.state_dict())
+        print()
+    time_elapsed = time.time() - since
+    print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
+    model.load_state_dict(best_model_wts)
+    return model
+
+
+def label2image(pred):
+    colormap = torch.tensor(VOC_COLORMAP, device=device,dtype=torch.int)
+    x = pred.long()
+    return (colormap[x,:]).data.cpu().numpy()
+
+
+def visualize_model(model:nn.Module, num_images=4):
+    was_training = model.training
+    model.eval()
+    images_so_far = 0
+    n, imgs = num_images, []
+    with torch.no_grad():
+        for i, (inputs, labels) in enumerate(dataloaders['val']):
+            inputs, labels = inputs.to(device), labels.to(device) # [b,3,320,480]
+            outputs = model(inputs)
+            pred = torch.argmax(outputs, dim=1) # [b,320,480]
+            inputs_nd = (inputs*std+mean).permute(0,2,3,1)*255 # 记得要变回去哦
+
+            for j in range(num_images):
+                images_so_far += 1
+                pred1 = label2image(pred[j]) # numpy.ndarray (320, 480, 3)
+                imgs += [inputs_nd[j].data.int().cpu().numpy(), pred1, label2image(labels[j])]
+                if images_so_far == num_images:
+                    model.train(mode=was_training)
+                    # 我已经固定了每次只显示4张图了，大家可以自己修改
+                    show_images(imgs[::3] + imgs[1::3] + imgs[2::3], 3, n)
+                    return model.train(mode=was_training)
 
 
 if __name__ == '__main__':
@@ -158,18 +261,18 @@ if __name__ == '__main__':
     # # 从0开始，以2为步长来进行切片，再从1开始，以2为步长进行切片，这样就实现了将feature和label上下显示比较
     # show_images(images[::2] + images[1::2], 2, n)
 
-    batch_size = 64
-    crop_size = (320,480)
-    max_num = 20000
-
-    voc_train = VOCSegDataset(True, crop_size, voc_dir, colormap2label, max_num)
-    voc_test = VOCSegDataset(False, crop_size, voc_dir, colormap2label, max_num)
-
-    num_workers = 0 if sys.platform.startswith('win') else 4
-    train_iter = torch.utils.data.DataLoader(voc_train, batch_size=batch_size, shuffle=True, drop_last=True, num_workers=num_workers)
-    test_iter = torch.utils.data.DataLoader(voc_test, batch_size=batch_size, drop_last=True, num_workers=num_workers)
-    dataloaders = {'train': train_iter, 'test': test_iter}
-    dataset_sizes = {'train': len(voc_train), 'test': len(voc_test)}
+    # batch_size = 64
+    # crop_size = (320,480)
+    # max_num = 20000
+    #
+    # voc_train = VOCSegDataset(True, crop_size, voc_dir, colormap2label, max_num)
+    # voc_test = VOCSegDataset(False, crop_size, voc_dir, colormap2label, max_num)
+    #
+    # num_workers = 0 if sys.platform.startswith('win') else 4
+    # train_iter = torch.utils.data.DataLoader(voc_train, batch_size=batch_size, shuffle=True, drop_last=True, num_workers=num_workers)
+    # test_iter = torch.utils.data.DataLoader(voc_test, batch_size=batch_size, drop_last=True, num_workers=num_workers)
+    # dataloaders = {'train': train_iter, 'test': test_iter}
+    # dataset_sizes = {'train': len(voc_train), 'test': len(voc_test)}
     #
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -181,15 +284,27 @@ if __name__ == '__main__':
     for param in model_ft.parameters():
         param.requires_grad = False
 
-    # print(model_ft)
-    # model_ft = nn.Sequential(*list(model_ft.children())[:-2]).to(device)
-    # x = torch.randn((2,3,320,480), device=device)
-    # print(model_ft(x).size())
+    print(model_ft)
+    model_ft = nn.Sequential(*list(model_ft.children())[:-2]).to(device)
+    x = torch.randn((2,3,320,480), device=device)
+    print(model_ft(x).size())
 
-    model_ft = nn.Sequential(*list(model_ft.children())[:-2],   # 去掉最后两层全连接层
-                             nn.Conv2d(512, num_classes, kernel_size= 1),
-                             nn.ConvTranspose2d(num_classes, num_classes, kernel_size=64, padding=16, stride=32)).to(device)
-
+    # model_ft = nn.Sequential(*list(model_ft.children())[:-2],   # 去掉最后两层全连接层
+    #                          nn.Conv2d(512, num_classes, kernel_size= 1),
+    #                          nn.ConvTranspose2d(num_classes, num_classes, kernel_size=64, padding=16, stride=32)).to(device)
+    #
+    # nn.init.xavier_normal_(model_ft[-2].weight.data, gain = 1)      # 倒数第二层使用xavier随机初始化
+    # model_ft[-1].weight.data = bilinear_kernel(num_classes, num_classes, 64).to(device)  # 最后一层使用双线性插值初始化
+    #
+    # epochs = 5
+    # criteon = nn.CrossEntropyLoss()
+    # optimizer = optim.SGD(model_ft.parameters(), lr=0.001, weight_decay=1e-4, momentum=0.9)
+    # exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
+    # model_ft = train_model(model_ft, criteon, optimizer, exp_lr_scheduler, num_epochs=epochs)
+    #
+    # mean = torch.tensor([0.485, 0.456, 0.406]).reshape(3, 1, 1).to(device)
+    # std = torch.tensor([0.229, 0.224, 0.225]).reshape(3, 1, 1).to(device)
+    # visualize_model(model_ft)
 
 
 
