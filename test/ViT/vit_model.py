@@ -52,25 +52,25 @@ class PathEmbed(nn.Module):
         # 如果指定了归一化层，则使用输出维度来初始化，如果没有则原样输出数据
         self.norm = norm_layer(embed_dim) if norm_layer else nn.Identity()
 
-def forward(self, x):
-    B,C,H,W = x.shape       # batch_size, channel, height, weight
-    assert H == self.img_size[0] and W == self.img_size[1], \
-        f"Input image size ({H}*{W}) doesn't match model ({self.img_size[0]}*{self.img_size[1]})."
+    def forward(self, x):
+        B,C,H,W = x.shape       # batch_size, channel, height, weight
+        assert H == self.img_size[0] and W == self.img_size[1], \
+            f"Input image size ({H}*{W}) doesn't match model ({self.img_size[0]}*{self.img_size[1]})."
 
-    # 卷积图片并且展平,然后交换第一维和第二维
-    x = self.proj(x).flatten(2).transpose(1, 2)
-    # 归一化
-    x = self.norm(x)
-    return x
+        # 卷积图片并且展平,然后交换第一维和第二维
+        x = self.proj(x).flatten(2).transpose(1, 2)
+        # 归一化
+        x = self.norm(x)
+        return x
 
 class Attention(nn.Module):
-    def __int__(self,
-                dim,                        # 输入token的dim
-                num_heads=8,
-                qkv_bias=False,
-                qk_scale=None,
-                attn_drop_ratio=0.,
-                proj_drop_ratio=0.,):
+    def __init__(self,
+                 dim,               # 输入token的dim
+                 num_heads=8,
+                 qkv_bias=False,
+                 qk_scale=None,
+                 attn_drop_ratio=0.,
+                 proj_drop_ratio=0.):
         super().__init__()
         self.num_heads = num_heads              # 多少个注意力头
         head_dim = dim // num_heads             # 每一个注意力头负责多少维，这样就把多头注意力转换为考虑自注意力问题，并且可以计算下面的内容
@@ -159,7 +159,7 @@ class Block(nn.Module):
                  norm_layer=nn.LayerNorm):
         super().__init__()
         self.norm1 = norm_layer(dim)
-        self.attn = Attention(dim, num_heads=num_heads, qkv_bias=qkv_bias, qk_scale=qk_scale,
+        self.attn = Attention(dim=dim, num_heads=num_heads, qkv_bias=qkv_bias, qk_scale=qk_scale,
                               attn_drop_ratio=attn_drop_ratio, proj_drop_ratio=drop_ratio)
 
         self.drop_path = DropPath(drop_path_ratio) if drop_path_ratio > 0 else nn.Identity()
@@ -192,7 +192,7 @@ class VisionTransformer(nn.Module):
         self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
         self.dist_token = nn.Parameter(torch.zeros(1, 1, embed_dim)) if distilled else None
         # 位置编码
-        self.pos_embed = nn.Parameter(torch.zeros(1 ,num_patches + self.num_tokens, embed_dim))
+        self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + self.num_tokens, embed_dim))
         # 这里对应Patch_Embedding加上cls_token和pos_embed之后的哪一个Dropout层
         self.pos_drop = nn.Dropout(p=drop_ratio)
 
@@ -230,7 +230,7 @@ class VisionTransformer(nn.Module):
             nn.init.trunc_normal_(self.dist_token, std=0.02)
 
         nn.init.trunc_normal_(self.cls_token, std=0.02)
-        self.apply(self._init_weights)
+        self.apply(_init_vit_weights)
 
     def forward_features(self, x):
         """
@@ -242,7 +242,7 @@ class VisionTransformer(nn.Module):
 
         # patch_embedding + cls_token
         cls_token = self.cls_token.expand(x.shape[0], -1, -1)
-        if self.dist_token is not None:
+        if self.dist_token is None:
             x = torch.cat((cls_token, x), dim=1)
 
         # + pos_embedding
