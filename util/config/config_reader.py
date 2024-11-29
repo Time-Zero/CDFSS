@@ -1,44 +1,51 @@
-import json
+import configparser
 import os
 from util.tools.singleton import *
+from enum import Enum
+
+class ConfigFileType(Enum):
+    INT = 1
+    FLOAT = 2
+    STR = 3
+    BOOL = 4
+
+INIT_CONFIG_FILE_PATH="E:\毕设\Cross_Domain_Few_Shot_Segmentation_System\config\config.ini"
 
 @singleton
 class ConfigReader:
-    """
-    用于读取配置文件的单例类
-    """
-    def __init__(self, config_path: str):
-        """
-        配置文件读取类的初始化函数
-        :param config_path: 配置文件路径
-        """
-        self.config_path = config_path
-        self.config_data_dict = None
-
-        if not os.path.exists(self.config_path):
-            print("Config File Not Found, Please check your config file")
-            exit(1)
+    def __init__(self):
+        print("加载配置文件中")
+        self.config_file_path = INIT_CONFIG_FILE_PATH
+        self.config = None
+        if not os.path.exists(self.config_file_path):
+            raise ValueError("配置文件不存在，请检查配置文件路径")
 
         self.read_config()
+        print("加载配置文件完成")
 
     def read_config(self):
-        """
-        读取配置文件并把配置文件存放到self.config_data_dict中
-        :return:
-        """
-        with open(self.config_path, 'r', encoding= 'utf-8') as json_file:
-            self.config_data_dict = json.load(json_file)
+        self.config = configparser.ConfigParser()
+        self.config.read(INIT_CONFIG_FILE_PATH, encoding="utf-8")
 
-    def get_config(self, key: str):
-        """
-        通过key获取对应的配置参数
-        :param key: 参数名
-        :return: 参数内容
-        """
-        if key not in self.config_data_dict:
-            return None
-        return self.config_data_dict[key]
+    def get_config(self, section: str, option: str, type: ConfigFileType):
+        match type:
+            case ConfigFileType.INT:
+                return self.config.getint(section, option)
+            case ConfigFileType.FLOAT:
+                return self.config.getfloat(section, option)
+            case ConfigFileType.STR:
+                return self.config.get(section, option)
+            case ConfigFileType.BOOL:
+                return self.config.getboolean(section, option)
+            case _:
+                raise ValueError("你需要返回的类型不合法")
 
 if __name__ == '__main__':
-    s1 = ConfigReader("E:\毕设\Cross_Domain_Few_Shot_Segmentation_System\config\config.json")
-    print(s1.get_config("dataset")['path'])
+    config = ConfigReader()
+    print(config.get_config('train_data','path',ConfigFileType.STR))
+    print(type(config.get_config('train_data','path',ConfigFileType.STR)))
+    print(type(config.get_config('train_data','trainval_percent',ConfigFileType.INT)))
+    print(type(config.get_config('train_data','need_annotation',ConfigFileType.BOOL)))
+    print(type(config.get_config('train_data','train_percent',ConfigFileType.FLOAT)))
+
+

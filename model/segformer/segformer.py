@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-from backbone import mit_b0, mit_b1, mit_b2, mit_b3, mit_b4, mit_b5
+from .backbone import mit_b0, mit_b1, mit_b2, mit_b3, mit_b4, mit_b5
 
 class MLP(nn.Module):
     def __init__(self, input_dim=2048, embed_dim=768):
@@ -70,7 +70,7 @@ class Decoder(nn.Module):
 
 class SegFormer(nn.Module):
     def __init__(self, num_classes=21, phi='b0', pretrained=False):
-        super(SegFormer, self).__init__()
+        super().__init__()
         self.in_channels = {
             'b0': [32, 64, 160, 256], 'b1': [64, 128, 320, 512], 'b2': [64, 128, 320, 512],
             'b3': [64, 128, 320, 512], 'b4': [64, 128, 320, 512], 'b5': [64, 128, 320, 512],
@@ -94,7 +94,7 @@ class SegFormer(nn.Module):
         x = F.interpolate(x, size=(H, W), mode='bilinear', align_corners=True)
         return x
 
-
+# 模型结构验证
 if __name__ == '__main__':
     model = SegFormer()
     print(model)
