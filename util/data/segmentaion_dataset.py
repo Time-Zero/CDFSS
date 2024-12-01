@@ -1,41 +1,52 @@
 import os
-from PIL import Image
 import numpy as np
-import torch
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms
+from PIL import Image
+from util.tools.utils import get_random_data, preprocess_image
+from torch.utils.data.dataset import Dataset
 
-class VOCSegmentationDataset(Dataset):
-    def __init__(self, image_dir, mask_dir, image_list_file, transform=None):
-        self.image_dir = image_dir
-        self.mask_dir = mask_dir
-        self.transform = transform
-        with open(image_list_file, 'r', encoding='utf-8') as f:
-            self.image_files = [line.strip() for line in f]
+
+class SegmentationDataset(Dataset):
+    def __init__(self, annotation_lines, input_shape, num_classes, train, dataset_path):
+        """
+
+        :param annotation_lines: 标注数据行
+        :param input_shape:
+        :param num_classes: 类别数量
+        :param train: 是否使用训练模式，如果使用训练模式则输出随机数据
+        :param dataset_path: 数据集位置
+        """
+        self.annotation_lines = annotation_lines
+        self.input_shape = input_shape
+        self.length = len(self.annotation_lines)
+        self.num_classes = num_classes
+        self.train = train
+        self.dataset_path = dataset_path
+        self.feature_path = None
+        self.label_path = None
+
+        self.feature_path = os.path.join(self.dataset_path, "JPEGImages")
+        self.label_path = os.path.join(self.dataset_path, "SegmentationClass")
 
     def __len__(self):
-        return len(self.image_files)
+        return self.length
 
-    def __getitem__(self, idx):
-        img_path = os.path.join(self.image_dir, self.image_files[idx] + '.jpg')
-        mask_path = os.path.join(self.mask_dir, self.image_files[idx] + '.png')
+    def __getitem__(self, index):
+        annotation_line = self.annotation_lines[index]
+        name = annotation_line.split()[0]
 
-        image = Image.open(img_path).convert("RGB")
-        mask = Image.open(mask_path).convert("L")
+        # 从文件中获取图像
+        jpg = Image.open(os.path.join(self.feature_path, name + '.jpg'))
+        png = Image.open(os.path.join(self.label_path, name + '.png'))
 
-        if self.transform:
-            image = self.transform(image)
-            mask = self.transform(mask)
+        # 数据增强
+        jpg, png = get_random_data(image=jpg, label=png, input_shape=self.input_shape, random=self.train)
 
-        mask = np.array(mask)
-        mask = torch.from_numpy(mask).long()
+        jpg = np.transpose(preprocess_image(np.array(jpg, np.float64)), [2, 0, 1])
+        png = np.array(png)
+        png[png >= self.num_classes] = self.num_classes
 
-        return image, mask
+        seg_labels = np.eye(self.num_classes + 1)[png.reshape([-1])]
+        seg_labels = seg_labels.reshape((int(self.input_shape[0]), int(self.input_shape[1]), self.num_classes + 1))
 
-# 定义数据转换
-transform = transforms.Compose([
-    transforms.Resize((512, 512)),
-    transforms.ToTensor()
-])
-
+        return jpg, png, seg_labels
 
