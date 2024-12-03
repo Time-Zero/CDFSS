@@ -1,2 +1,4 @@
 .idea
-./data/train_data/VOCdevkit
+/data/train_data/VOCdevkit
+/data/weights
+!/data/weights/README.md

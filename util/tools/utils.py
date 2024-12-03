@@ -1,14 +1,24 @@
+import math
+from enum import Enum
+from functools import partial
+
 import numpy as np
 import cv2
 import torch
 from PIL import Image
 import random
+from torch import optim, nn
+
+class EnumOptimizer(Enum):
+    ADAM=1
+    ADAMW=2
+    SGD=3
 
 
 def convert_color(image):
     """
     将图像转为RGB格式，如果是灰度类型的图像也转换为RGB格式
-    :param image:
+    :param image: 输入的图像，需要为PIL对象
     :return:
     """
     # image是一个三维的图像[w,h,rgb],并且第三维的宽度是3（r,g,b）
@@ -19,6 +29,18 @@ def convert_color(image):
         return image
 
 def get_random_data(image, label, input_shape, jitter=.3, hue=.1, sat=.7, val=.3, random=True):
+    """
+    对输入图像进行数据增强处理
+    :param image: features
+    :param label: 标注图像
+    :param input_shape: 要求输出图像的尺寸
+    :param jitter: 对输入图像纵横比缩放的随机系数
+    :param hue: 将图像转为HSV格式时的参数
+    :param sat: 将图像转为HSV格式时的参数
+    :param val: 将图像转为HSV格式时的参数
+    :param random: 是否采用随机增强（对训练数据设置为True，对验证数据设置为False）
+    :return:
+    """
     # 转为RGB图像
     image = convert_color(image)
     label = Image.fromarray(np.array(label))
@@ -160,3 +182,113 @@ def worker_init_fn(worker_id, rank, seed):
     random.seed(worker_seed)
     np.random.seed(worker_seed)
     torch.manual_seed(worker_seed)
+
+def random_seed_init(seed: int = 0):
+    """
+    对训练过程中的所有随机函数设置随机数种子
+    :param seed: int 随机数种子
+    :return:
+    """
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+def pretrained_weight_load(model_dict: dict ,weight_path: str, device: torch.device):
+    """
+    加载预训练权重
+    :param model_dict: 模型state_dict
+    :param weight_path: 权重存放路径
+    :param device: 将权重映射到哪个设备上(gpu or cpu)
+    :return:
+    """
+    load_key, no_load_key, temp_dict = [], [], []
+    pretrained_dict = torch.load(weight_path, map_location=device)
+    for k, v in pretrained_dict.items():
+        if k in model_dict.keys() and np.shape(model_dict[k]) == np.shape(v):
+            temp_dict[k] = v
+            load_key.append(k)
+        else:
+            no_load_key.append(k)
+    return load_key, no_load_key, temp_dict
+
+def calculate_lf_fit(nbs: int, optimizer_type: EnumOptimizer, batch_size: int, init_lr: float, min_lr: float):
+    """
+    计算合适的学习率
+    :param nbs: normal batch size 用于和输入的batch_size比较
+    :param optimizer_type: 选择优化器种类
+    :param batch_size: 批大小
+    :param init_lr: 初始化学习率
+    :param min_lr: 最小学习率
+    :return:
+    """
+    lr_limit_max = 1e-4 if optimizer_type in [EnumOptimizer.ADAM, EnumOptimizer.ADAMW] else 5e-2
+    lr_limit_min = 3e-5 if optimizer_type in [EnumOptimizer.ADAM, EnumOptimizer.ADAMW] else 5e-4
+    init_lr_fit     = min(max(batch_size / nbs * init_lr, lr_limit_min), lr_limit_max)
+    min_lr_fit      = min(max(batch_size / nbs * min_lr, lr_limit_min * 1e-2), lr_limit_max * 1e-2)
+
+    return init_lr_fit, min_lr_fit
+
+def optimizer_select(optimizer_type: EnumOptimizer, model: nn.Module, init_lr_fit: float, momentum: float, weight_decay: float) -> torch.optim.Optimizer:
+    """
+    选择和初始化优化器
+    :param optimizer_type: 优化器种类
+    :param model: 模型
+    :param init_lr_fit: 初始化学习率
+    :param momentum: 一阶动量的衰减率
+    :param weight_decay: 权重衰减参数
+    :return:
+    """
+    optimizer = {
+        EnumOptimizer.ADAM: optim.Adam(model.parameters(), init_lr_fit, betas=(momentum, 0.999), weight_decay=weight_decay),
+        EnumOptimizer.ADAMW: optim.AdamW(model.parameters(), init_lr_fit, betas=(momentum, 0.999), weight_decay=weight_decay),
+        EnumOptimizer.SGD: optim.SGD(model.parameters(), init_lr_fit, momentum=momentum, nesterov=True, weight_decay=weight_decay)
+    }[optimizer_type]
+
+    return optimizer
+
+def get_lr_scheduler(lr_decay_type, lr, min_lr, total_iters, warmup_iters_ratio = 0.1, warmup_lr_ratio = 0.1, no_aug_iter_ratio = 0.3, step_num = 10):
+    """
+    获取学习率调度器
+    :param lr_decay_type: 学习率调度器类型
+    :param lr: 学习率
+    :param min_lr: 最小学习率
+    :param total_iters: 总迭代步数
+    :param warmup_iters_ratio:
+    :param warmup_lr_ratio:
+    :param no_aug_iter_ratio:
+    :param step_num:
+    :return:
+    """
+    def yolox_warm_cos_lr(lr, min_lr, total_iters, warmup_total_iters, warmup_lr_start, no_aug_iter, iters):
+        if iters <= warmup_total_iters:
+            # lr = (lr - warmup_lr_start) * iters / float(warmup_total_iters) + warmup_lr_start
+            lr = (lr - warmup_lr_start) * pow(iters / float(warmup_total_iters), 2) + warmup_lr_start
+        elif iters >= total_iters - no_aug_iter:
+            lr = min_lr
+        else:
+            lr = min_lr + 0.5 * (lr - min_lr) * (
+                1.0 + math.cos(math.pi* (iters - warmup_total_iters) / (total_iters - warmup_total_iters - no_aug_iter))
+            )
+        return lr
+
+    def step_lr(lr, decay_rate, step_size, iters):
+        if step_size < 1:
+            raise ValueError("step_size must above 1.")
+        n       = iters // step_size
+        out_lr  = lr * decay_rate ** n
+        return out_lr
+
+    if lr_decay_type == "cos":
+        warmup_total_iters  = min(max(warmup_iters_ratio * total_iters, 1), 3)
+        warmup_lr_start     = max(warmup_lr_ratio * lr, 1e-6)
+        no_aug_iter         = min(max(no_aug_iter_ratio * total_iters, 1), 15)
+        func = partial(yolox_warm_cos_lr ,lr, min_lr, total_iters, warmup_total_iters, warmup_lr_start, no_aug_iter)
+    else:
+        decay_rate  = (min_lr / lr) ** (1 / (step_num - 1))
+        step_size   = total_iters / step_num
+        func = partial(step_lr, lr, decay_rate, step_size)
+
+    return func
