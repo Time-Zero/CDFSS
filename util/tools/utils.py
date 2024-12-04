@@ -1,18 +1,9 @@
-import math
-from enum import Enum
-from functools import partial
-
 import numpy as np
 import cv2
 import torch
 from PIL import Image
 import random
-from torch import optim, nn
-
-class EnumOptimizer(Enum):
-    ADAM=1
-    ADAMW=2
-    SGD=3
+from util.tools.utils_model import EnumOptimizer
 
 
 def convert_color(image):
@@ -204,8 +195,8 @@ def pretrained_weight_load(model_dict: dict ,weight_path: str, device: torch.dev
     :param device: 将权重映射到哪个设备上(gpu or cpu)
     :return:
     """
-    load_key, no_load_key, temp_dict = [], [], []
-    pretrained_dict = torch.load(weight_path, map_location=device)
+    pretrained_dict = torch.load(weight_path, map_location=device, weights_only=True)
+    load_key, no_load_key, temp_dict = [], [], {}
     for k, v in pretrained_dict.items():
         if k in model_dict.keys() and np.shape(model_dict[k]) == np.shape(v):
             temp_dict[k] = v
@@ -231,64 +222,4 @@ def calculate_lf_fit(nbs: int, optimizer_type: EnumOptimizer, batch_size: int, i
 
     return init_lr_fit, min_lr_fit
 
-def optimizer_select(optimizer_type: EnumOptimizer, model: nn.Module, init_lr_fit: float, momentum: float, weight_decay: float) -> torch.optim.Optimizer:
-    """
-    选择和初始化优化器
-    :param optimizer_type: 优化器种类
-    :param model: 模型
-    :param init_lr_fit: 初始化学习率
-    :param momentum: 一阶动量的衰减率
-    :param weight_decay: 权重衰减参数
-    :return:
-    """
-    optimizer = {
-        EnumOptimizer.ADAM: optim.Adam(model.parameters(), init_lr_fit, betas=(momentum, 0.999), weight_decay=weight_decay),
-        EnumOptimizer.ADAMW: optim.AdamW(model.parameters(), init_lr_fit, betas=(momentum, 0.999), weight_decay=weight_decay),
-        EnumOptimizer.SGD: optim.SGD(model.parameters(), init_lr_fit, momentum=momentum, nesterov=True, weight_decay=weight_decay)
-    }[optimizer_type]
 
-    return optimizer
-
-def get_lr_scheduler(lr_decay_type, lr, min_lr, total_iters, warmup_iters_ratio = 0.1, warmup_lr_ratio = 0.1, no_aug_iter_ratio = 0.3, step_num = 10):
-    """
-    获取学习率调度器
-    :param lr_decay_type: 学习率调度器类型
-    :param lr: 学习率
-    :param min_lr: 最小学习率
-    :param total_iters: 总迭代步数
-    :param warmup_iters_ratio:
-    :param warmup_lr_ratio:
-    :param no_aug_iter_ratio:
-    :param step_num:
-    :return:
-    """
-    def yolox_warm_cos_lr(lr, min_lr, total_iters, warmup_total_iters, warmup_lr_start, no_aug_iter, iters):
-        if iters <= warmup_total_iters:
-            # lr = (lr - warmup_lr_start) * iters / float(warmup_total_iters) + warmup_lr_start
-            lr = (lr - warmup_lr_start) * pow(iters / float(warmup_total_iters), 2) + warmup_lr_start
-        elif iters >= total_iters - no_aug_iter:
-            lr = min_lr
-        else:
-            lr = min_lr + 0.5 * (lr - min_lr) * (
-                1.0 + math.cos(math.pi* (iters - warmup_total_iters) / (total_iters - warmup_total_iters - no_aug_iter))
-            )
-        return lr
-
-    def step_lr(lr, decay_rate, step_size, iters):
-        if step_size < 1:
-            raise ValueError("step_size must above 1.")
-        n       = iters // step_size
-        out_lr  = lr * decay_rate ** n
-        return out_lr
-
-    if lr_decay_type == "cos":
-        warmup_total_iters  = min(max(warmup_iters_ratio * total_iters, 1), 3)
-        warmup_lr_start     = max(warmup_lr_ratio * lr, 1e-6)
-        no_aug_iter         = min(max(no_aug_iter_ratio * total_iters, 1), 15)
-        func = partial(yolox_warm_cos_lr ,lr, min_lr, total_iters, warmup_total_iters, warmup_lr_start, no_aug_iter)
-    else:
-        decay_rate  = (min_lr / lr) ** (1 / (step_num - 1))
-        step_size   = total_iters / step_num
-        func = partial(step_lr, lr, decay_rate, step_size)
-
-    return func
