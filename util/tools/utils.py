@@ -42,22 +42,18 @@ def get_random_data(image, label, input_shape, jitter=.3, hue=.1, sat=.7, val=.3
     h,w = input_shape
 
     if not random:
-        # 计算缩放比例
-        scale = min(w/iw, h/ih)
-        # 得到缩小后的尺寸
-        nw = int(iw*scale)
-        nh = int(ih*scale)
+        iw, ih = image.size
+        scale = min(w / iw, h / ih)
+        nw = int(iw * scale)
+        nh = int(ih * scale)
 
-        # 照片缩放并双三次插值处理像素
-        image = image.resize((nw,nh), Image.BICUBIC)
-        # 生成一张灰色图片，并且把缩放后的照片添加到其中（为照片添加灰色背景）
-        new_image = Image.new('RGB', (w, h), (128,128,128))
-        new_image.paste(image, ((w-nw)//2, (h-nh)//2))
+        image = image.resize((nw, nh), Image.BICUBIC)
+        new_image = Image.new('RGB', [w, h], (128, 128, 128))
+        new_image.paste(image, ((w - nw) // 2, (h - nh) // 2))
 
-        # 为label也添加灰边，并且使用最近邻插值处理图像
-        label = label.resize((nw,h), Image.NEAREST)
-        new_label   = Image.new('L', (w, h), 0)
-        new_label.paste(label, (w-nw)//2, (h-nh)//2)
+        label = label.resize((nw, nh), Image.NEAREST)
+        new_label = Image.new('L', [w, h], (0))
+        new_label.paste(label, ((w - nw) // 2, (h - nh) // 2))
         return new_image, new_label
 
     else:

@@ -46,45 +46,49 @@ if __name__ == '__main__':
                          drop_last=True, collate_fn=seg_dataset_collate, sampler=None,
                          worker_init_fn=partial(worker_init_fn, rank=0, seed=0))
 
-
-    model = SegFormer(num_classes=21,phi='b0',pretrained=False)
-    model_dict = model.state_dict()
-    pretrained_dict = torch.load("E:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\data\\weights\\segformer_b0_backbone_weights.pth", map_location=device)
-    load_key, no_load_key, temp_dict = [],[],[]
-    for k, v in pretrained_dict.items():
-        if k in model_dict.keys() and np.shape(model_dict[k]) == np.shape(v):
-            temp_dict[k] = v
-            load_key.append(k)
-        else:
-            no_load_key.append(k)
-    model_dict.update(temp_dict)
-    model.load_state_dict(model_dict)
-
-    optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
-    cls_weights = np.ones([num_classes], np.float32)
+    for iter, batch in enumerate(gen_val):
+        test1 = iter
+        tets2 = batch
 
 
-    model.train()
-    model.to(device)
-    epoch = 10
-    running_loss = 0.0
-    for iter, batch in enumerate(gen):
-        imgs, pngs, labels = batch
-        with torch.no_grad():
-            imgs = imgs.to(device)
-            pngs = pngs.to(device)
-            labels = labels.to(device)
-            weights = torch.from_numpy(cls_weights)
-            weights = weights.to(device)
-        optimizer.zero_grad()
-        outputs = model(imgs)
-        loss = CE_Loss(inputs=outputs, target=pngs, cls_weights=weights, num_classes= num_classes)
-        loss.backward()
-        # 优化
-        optimizer.step()
-        # 打印统计信息
-        running_loss += loss.item()
-        if iter % 10 == 9:  # 每100个batch打印一次
-            print(f'[Epoch {epoch + 1}, Batch {iter + 1}] loss: {running_loss / 100:.3f}')
-            running_loss = 0.0
-    print('Finished Training')
+    # model = SegFormer(num_classes=21,phi='b0',pretrained=False)
+    # model_dict = model.state_dict()
+    # pretrained_dict = torch.load("E:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\data\\weights\\segformer_b0_backbone_weights.pth", map_location=device)
+    # load_key, no_load_key, temp_dict = [],[],[]
+    # for k, v in pretrained_dict.items():
+    #     if k in model_dict.keys() and np.shape(model_dict[k]) == np.shape(v):
+    #         temp_dict[k] = v
+    #         load_key.append(k)
+    #     else:
+    #         no_load_key.append(k)
+    # model_dict.update(temp_dict)
+    # model.load_state_dict(model_dict)
+    #
+    # optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+    # cls_weights = np.ones([num_classes], np.float32)
+    #
+    #
+    # model.train()
+    # model.to(device)
+    # epoch = 10
+    # running_loss = 0.0
+    # for iter, batch in enumerate(gen):
+    #     imgs, pngs, labels = batch
+    #     with torch.no_grad():
+    #         imgs = imgs.to(device)
+    #         pngs = pngs.to(device)
+    #         labels = labels.to(device)
+    #         weights = torch.from_numpy(cls_weights)
+    #         weights = weights.to(device)
+    #     optimizer.zero_grad()
+    #     outputs = model(imgs)
+    #     loss = CE_Loss(inputs=outputs, target=pngs, cls_weights=weights, num_classes= num_classes)
+    #     loss.backward()
+    #     # 优化
+    #     optimizer.step()
+    #     # 打印统计信息
+    #     running_loss += loss.item()
+    #     if iter % 10 == 9:  # 每100个batch打印一次
+    #         print(f'[Epoch {epoch + 1}, Batch {iter + 1}] loss: {running_loss / 100:.3f}')
+    #         running_loss = 0.0
+    # print('Finished Training')
