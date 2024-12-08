@@ -1,18 +1,21 @@
-import torch
-from torch import optim, nn
 import math
+import os
 from enum import Enum
 from functools import partial
-from util.tools.utils_metrics import f_score
-from tqdm import tqdm
-from util.tools.loss import focal_loss, ce_loss, dice_loss
+
+import torch
+from torch import optim, nn
 from torch.cuda.amp import autocast
+from tqdm import tqdm
+
+from util.tools.loss import focal_loss, ce_loss, dice_loss
+from util.tools.utils_metrics import f_score
 
 
 class EnumOptimizer(Enum):
-    ADAM=1
-    ADAMW=2
-    SGD=3
+    ADAM = 1
+    ADAMW = 2
+    SGD = 3
 
 
 def set_optimizer_lr(optimizer, lr_scheduler_func, epoch):
@@ -27,7 +30,9 @@ def set_optimizer_lr(optimizer, lr_scheduler_func, epoch):
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
-def get_lr_scheduler(lr_decay_type, lr, min_lr, total_iters, warmup_iters_ratio = 0.1, warmup_lr_ratio = 0.1, no_aug_iter_ratio = 0.3, step_num = 10):
+
+def get_lr_scheduler(lr_decay_type, lr, min_lr, total_iters, warmup_iters_ratio=0.1, warmup_lr_ratio=0.1,
+                     no_aug_iter_ratio=0.3, step_num=10):
     """
     获取学习率调度器
     :param lr_decay_type: 学习率调度器类型
@@ -40,6 +45,7 @@ def get_lr_scheduler(lr_decay_type, lr, min_lr, total_iters, warmup_iters_ratio 
     :param step_num:
     :return:
     """
+
     def yolox_warm_cos_lr(lr, min_lr, total_iters, warmup_total_iters, warmup_lr_start, no_aug_iter, iters):
         if iters <= warmup_total_iters:
             # lr = (lr - warmup_lr_start) * iters / float(warmup_total_iters) + warmup_lr_start
@@ -48,28 +54,30 @@ def get_lr_scheduler(lr_decay_type, lr, min_lr, total_iters, warmup_iters_ratio 
             lr = min_lr
         else:
             lr = min_lr + 0.5 * (lr - min_lr) * (
-                1.0 + math.cos(math.pi* (iters - warmup_total_iters) / (total_iters - warmup_total_iters - no_aug_iter))
+                    1.0 + math.cos(
+                math.pi * (iters - warmup_total_iters) / (total_iters - warmup_total_iters - no_aug_iter))
             )
         return lr
 
     def step_lr(lr, decay_rate, step_size, iters):
         if step_size < 1:
             raise ValueError("step_size must above 1.")
-        n       = iters // step_size
-        out_lr  = lr * decay_rate ** n
+        n = iters // step_size
+        out_lr = lr * decay_rate ** n
         return out_lr
 
     if lr_decay_type == "cos":
-        warmup_total_iters  = min(max(warmup_iters_ratio * total_iters, 1), 3)
-        warmup_lr_start     = max(warmup_lr_ratio * lr, 1e-6)
-        no_aug_iter         = min(max(no_aug_iter_ratio * total_iters, 1), 15)
-        func = partial(yolox_warm_cos_lr ,lr, min_lr, total_iters, warmup_total_iters, warmup_lr_start, no_aug_iter)
+        warmup_total_iters = min(max(warmup_iters_ratio * total_iters, 1), 3)
+        warmup_lr_start = max(warmup_lr_ratio * lr, 1e-6)
+        no_aug_iter = min(max(no_aug_iter_ratio * total_iters, 1), 15)
+        func = partial(yolox_warm_cos_lr, lr, min_lr, total_iters, warmup_total_iters, warmup_lr_start, no_aug_iter)
     else:
-        decay_rate  = (min_lr / lr) ** (1 / (step_num - 1))
-        step_size   = total_iters / step_num
+        decay_rate = (min_lr / lr) ** (1 / (step_num - 1))
+        step_size = total_iters / step_num
         func = partial(step_lr, lr, decay_rate, step_size)
 
     return func
+
 
 def get_lr(optimizer):
     """
@@ -80,7 +88,9 @@ def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
 
-def optimizer_select(optimizer_type: EnumOptimizer, model: nn.Module, init_lr_fit: float, momentum: float, weight_decay: float) -> torch.optim.Optimizer:
+
+def optimizer_select(optimizer_type: EnumOptimizer, model: nn.Module, init_lr_fit: float, momentum: float,
+                     weight_decay: float) -> torch.optim.Optimizer:
     """
     选择和初始化优化器
     :param optimizer_type: 优化器种类
@@ -91,14 +101,19 @@ def optimizer_select(optimizer_type: EnumOptimizer, model: nn.Module, init_lr_fi
     :return:
     """
     optimizer = {
-        EnumOptimizer.ADAM: optim.Adam(model.parameters(), init_lr_fit, betas=(momentum, 0.999), weight_decay=weight_decay),
-        EnumOptimizer.ADAMW: optim.AdamW(model.parameters(), init_lr_fit, betas=(momentum, 0.999), weight_decay=weight_decay),
-        EnumOptimizer.SGD: optim.SGD(model.parameters(), init_lr_fit, momentum=momentum, nesterov=True, weight_decay=weight_decay)
+        EnumOptimizer.ADAM: optim.Adam(model.parameters(), init_lr_fit, betas=(momentum, 0.999),
+                                       weight_decay=weight_decay),
+        EnumOptimizer.ADAMW: optim.AdamW(model.parameters(), init_lr_fit, betas=(momentum, 0.999),
+                                         weight_decay=weight_decay),
+        EnumOptimizer.SGD: optim.SGD(model.parameters(), init_lr_fit, momentum=momentum, nesterov=True,
+                                     weight_decay=weight_decay)
     }[optimizer_type]
 
     return optimizer
 
-def fit_one_epoch(model_train, model, optimizer, num_classes, cur_epoch, epoch_step, epoch_step_val, gen, gen_val, total_epoch,
+
+def fit_one_epoch(model_train, model, optimizer, num_classes, cur_epoch, epoch_step, epoch_step_val, gen, gen_val,
+                  total_epoch,
                   cuda_enable, focal_loss_flag, dice_loss_flag, cls_weights, fp16, scaler):
     total_loss = 0.0
     total_f_score = 0.0
@@ -125,7 +140,7 @@ def fit_one_epoch(model_train, model, optimizer, num_classes, cur_epoch, epoch_s
         optimizer.zero_grad()
 
         if not fp16:
-        # 如果没有使用混合精度
+            # 如果没有使用混合精度
             # 前向传播
             outputs = model_train(images)
 
@@ -148,7 +163,7 @@ def fit_one_epoch(model_train, model, optimizer, num_classes, cur_epoch, epoch_s
             optimizer.step()
 
         else:
-        # 启用混合精度
+            # 启用混合精度
             with autocast():
                 outputs = model_train(images)
 
@@ -181,7 +196,6 @@ def fit_one_epoch(model_train, model, optimizer, num_classes, cur_epoch, epoch_s
     pbar.close()
     print('训练结束')
 
-
     print('开始评估')
     pbar = tqdm(total=epoch_step_val, desc=f'Epoch {cur_epoch + 1}/{total_epoch}', postfix=dict, mininterval=0.3)
     model_train.eval()
@@ -211,7 +225,6 @@ def fit_one_epoch(model_train, model, optimizer, num_classes, cur_epoch, epoch_s
                 main_dice = dice_loss(outputs, pngs)
                 loss = loss + main_dice
 
-
             _f_score = f_score(outputs, labels)
 
             val_loss += loss.item()
@@ -226,3 +239,4 @@ def fit_one_epoch(model_train, model, optimizer, num_classes, cur_epoch, epoch_s
     print('结束评估')
     print('Epoch:' + str(cur_epoch + 1) + '/' + str(total_epoch))
     print('Total Loss: %.3f || Val Loss: %.3f ' % (total_loss / epoch_step, val_loss / epoch_step_val))
+    torch.save(model.state_dict(), os.path.join('.', "last_epoch_weights.pth"))

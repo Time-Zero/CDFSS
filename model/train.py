@@ -1,13 +1,15 @@
 import os
 from functools import partial
+
 from termcolor import colored
+from torch.amp import GradScaler
 from torch.backends import cudnn
 from torch.utils.data import DataLoader
+
 from model.segformer.segformer import SegFormer
 from util.config.config_reader import ConfigReader, ConfigFileType
-from util.tools.utils import *
-from torch.amp import GradScaler
 from util.data.segmentaion_dataset import SegmentationDataset
+from util.tools.utils import *
 from util.tools.utils_model import set_optimizer_lr, get_lr_scheduler, EnumOptimizer, optimizer_select, fit_one_epoch
 
 
@@ -54,8 +56,8 @@ def train_model():
         train_lines = f.readlines()
     with open(val_path, 'r', encoding='utf-8') as f:
         val_lines = f.readlines()
-    num_train = len(train_lines)            # 训练数据总数
-    num_val = len(val_lines)                # 测试数据总数
+    num_train = len(train_lines)  # 训练数据总数
+    num_val = len(val_lines)  # 测试数据总数
 
     # 初始化随机数种子
     random_seed_init(seed)
@@ -75,12 +77,14 @@ def train_model():
             if not os.path.exists(backbone_weight_path):
                 raise ValueError('主干网络预训练权重文件不存在，请检查')
 
-            model = SegFormer(num_classes=num_classes, phi=feature_extraction_fun, pretrained=backbone_pretrained, backbone_weight_path=backbone_weight_path)
+            model = SegFormer(num_classes=num_classes, phi=feature_extraction_fun, pretrained=backbone_pretrained,
+                              backbone_weight_path=backbone_weight_path)
         else:
             # 加载全局预训练权重
             model = SegFormer(num_classes=num_classes, phi=feature_extraction_fun, pretrained=backbone_pretrained)
             model_dict = model.state_dict()
-            load_key, no_load_key, temp_dict = pretrained_weight_load(model_dict=model_dict, weight_path=model_weight_path, device=device)
+            load_key, no_load_key, temp_dict = pretrained_weight_load(model_dict=model_dict,
+                                                                      weight_path=model_weight_path, device=device)
 
             model_dict.update(temp_dict)
             model.load_state_dict(model_dict)
@@ -101,8 +105,7 @@ def train_model():
     else:
         scaler = None
 
-
-    model_train = model.train()
+    model_train = torch.nn.DataParallel(model.train())
     cudnn.benchmark = True
     model_train = model_train.to(device)
 
@@ -119,10 +122,12 @@ def train_model():
                       'adamw': EnumOptimizer.ADAMW,
                       'sgd': EnumOptimizer.SGD}[optimizer_type]
     min_lr = init_lr * min_lr_rate
-    init_lr_fit, min_lr_fit = calculate_lf_fit(nbs = 16, optimizer_type=optimizer_type, batch_size=batch_size, init_lr=init_lr, min_lr=min_lr)
+    init_lr_fit, min_lr_fit = calculate_lf_fit(nbs=16, optimizer_type=optimizer_type, batch_size=batch_size,
+                                               init_lr=init_lr, min_lr=min_lr)
 
     # 选择优化器
-    optimizer = optimizer_select(optimizer_type=optimizer_type, model=model, init_lr_fit=init_lr_fit, momentum=momentum, weight_decay=weight_decay)
+    optimizer = optimizer_select(optimizer_type=optimizer_type, model=model, init_lr_fit=init_lr_fit, momentum=momentum,
+                                 weight_decay=weight_decay)
 
     # 获得学习率下降公式
     lr_scheduler_func = get_lr_scheduler(lr_decay_type, init_lr_fit, min_lr_fit, unfreeze_epoch)
@@ -137,27 +142,18 @@ def train_model():
     train_dataset = SegmentationDataset(train_lines, input_shape, num_classes, True, dataset_path)
     val_dataset = SegmentationDataset(val_lines, input_shape, num_classes, False, dataset_path)
 
-    train_sampler = None
-    val_sampler = None
-    shuffle = True
-
-    gen = DataLoader(train_dataset, shuffle=shuffle, batch_size=batch_size, num_workers=num_workers, pin_memory=True,
-                     drop_last=True, collate_fn=seg_dataset_collate, sampler=train_sampler,
+    gen = DataLoader(train_dataset, shuffle=True, batch_size=batch_size, num_workers=num_workers, pin_memory=True,
+                     drop_last=True, collate_fn=seg_dataset_collate, sampler=None,
                      worker_init_fn=partial(worker_init_fn, rank=0, seed=seed))
-    gen_val = DataLoader(val_dataset, shuffle=shuffle, batch_size=batch_size, num_workers=num_workers, pin_memory=True,
-                         drop_last=True, collate_fn=seg_dataset_collate, sampler=val_sampler,
+    gen_val = DataLoader(val_dataset, shuffle=True, batch_size=batch_size, num_workers=num_workers, pin_memory=True,
+                         drop_last=True, collate_fn=seg_dataset_collate, sampler=None,
                          worker_init_fn=partial(worker_init_fn, rank=0, seed=seed))
 
-    #TODO: 修复gen_val的enumerate报错问题
-    for iter, batch in enumerate(gen_val):
-        test1 = iter
-        test2 = batch
-
-    unfreeze_flag = False       # 标志：防止从冻结epoch到解冻epoch后batch_size被多次设置
+    unfreeze_flag = False  # 标志：防止从冻结epoch到解冻epoch后batch_size被多次设置
     for epoch in range(init_epoch, unfreeze_epoch):
 
         if epoch >= freeze_epoch and not unfreeze_flag and freeze_train:
-        # 如果是冻结学习，并且到了解冻阶段，则解冻模型
+            # 如果是冻结学习，并且到了解冻阶段，则解冻模型
 
             # 赋值新的batch_size
             batch_size = unfreeze_batch_size
@@ -179,14 +175,13 @@ def train_model():
             for param in model.backbone.parameters():
                 param.requires_grad = True
 
-
-            gen = DataLoader(train_dataset, shuffle=shuffle, batch_size=batch_size, num_workers=num_workers,
+            gen = DataLoader(train_dataset, shuffle=True, batch_size=batch_size, num_workers=num_workers,
                              pin_memory=True,
-                             drop_last=True, collate_fn=seg_dataset_collate, sampler=train_sampler,
+                             drop_last=True, collate_fn=seg_dataset_collate, sampler=None,
                              worker_init_fn=partial(worker_init_fn, rank=0, seed=seed))
-            gen_val = DataLoader(val_dataset, shuffle=shuffle, batch_size=batch_size, num_workers=num_workers,
+            gen_val = DataLoader(val_dataset, shuffle=True, batch_size=batch_size, num_workers=num_workers,
                                  pin_memory=True,
-                                 drop_last=True, collate_fn=seg_dataset_collate, sampler=val_sampler,
+                                 drop_last=True, collate_fn=seg_dataset_collate, sampler=None,
                                  worker_init_fn=partial(worker_init_fn, rank=0, seed=seed))
 
             unfreeze_flag = True
@@ -197,4 +192,3 @@ def train_model():
                       gen_val=gen_val, total_epoch=unfreeze_epoch, cuda_enable=cuda_enable,
                       focal_loss_flag=focal_loss, dice_loss_flag=dice_loss, cls_weights=cls_weights,
                       fp16=fp16, scaler=scaler)
-
