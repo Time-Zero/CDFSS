@@ -1,3 +1,4 @@
+import PIL
 import numpy as np
 import cv2
 import torch
@@ -217,5 +218,28 @@ def calculate_lf_fit(nbs: int, optimizer_type: EnumOptimizer, batch_size: int, i
     min_lr_fit      = min(max(batch_size / nbs * min_lr, lr_limit_min * 1e-2), lr_limit_max * 1e-2)
 
     return init_lr_fit, min_lr_fit
+
+def gray_image_palette_add(gray_image: PIL.Image.Image, color_map: list) -> PIL.Image.Image:
+    """
+    为灰度图像添加调色板配置文件，使其可以显示为伪色彩图像
+    :param gray_image: 需要添加配置文件的灰度图像
+    :param color_map: 色彩映射表，需要将对应的灰度值映射为什么颜色
+    :return: 伪色彩图像
+    """
+    base_color_map = [
+        [i,i,i] for i in range(256)]
+
+    color_map_len = len(color_map)
+    assert color_map_len <= 256, "色彩映射表范围超出灰度空间"
+
+    for i in range(color_map_len):
+        base_color_map[i] = color_map[i]
+
+    palette = []
+    for it in base_color_map:
+        palette.extend(it)
+
+    gray_image.putpalette(palette)
+    return gray_image
 
 
