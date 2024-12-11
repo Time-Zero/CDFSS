@@ -6,6 +6,9 @@ from torch.utils.data.dataset import Dataset
 
 
 class SegmentationDataset(Dataset):
+    """
+    自定义的DataLoader
+    """
     def __init__(self, annotation_lines, input_shape, num_classes, train, dataset_path):
         """
 
