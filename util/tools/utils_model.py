@@ -192,51 +192,51 @@ def fit_one_epoch(model_train, model, optimizer, num_classes, cur_epoch, epoch_s
                             'f_score': total_f_score / (iteration + 1),
                             'lr': get_lr(optimizer)})
         pbar.update(1)
-
     pbar.close()
     print('训练结束')
 
-    print('开始评估')
-    pbar = tqdm(total=epoch_step_val, desc=f'Epoch {cur_epoch + 1}/{total_epoch}', postfix=dict, mininterval=0.3)
-    model_train.eval()
-    for iteration, batch in enumerate(gen_val):
-        if iteration >= epoch_step_val:
-            break
+    if cur_epoch % 5 == 0:
+        print('开始评估')
+        pbar = tqdm(total=epoch_step_val, desc=f'Epoch {cur_epoch + 1}/{total_epoch}', postfix=dict, mininterval=0.3)
+        model_train.eval()
+        for iteration, batch in enumerate(gen_val):
+            if iteration >= epoch_step_val:
+                break
 
-        images, pngs, labels = batch
-        with torch.no_grad():
-            weights = torch.from_numpy(cls_weights)
-            if cuda_enable:
-                images = images.cuda()
-                pngs = pngs.cuda()
-                labels = labels.cuda()
-                weights = weights.cuda()
+            images, pngs, labels = batch
+            with torch.no_grad():
+                weights = torch.from_numpy(cls_weights)
+                if cuda_enable:
+                    images = images.cuda()
+                    pngs = pngs.cuda()
+                    labels = labels.cuda()
+                    weights = weights.cuda()
 
-            # 前向传播
-            outputs = model_train(images)
+                # 前向传播
+                outputs = model_train(images)
 
-            # 计算损失
-            if focal_loss_flag:
-                loss = focal_loss(outputs, pngs, weights, num_classes=num_classes)
-            else:
-                loss = ce_loss(outputs, pngs, weights, num_classes=num_classes)
+                # 计算损失
+                if focal_loss_flag:
+                    loss = focal_loss(outputs, pngs, weights, num_classes=num_classes)
+                else:
+                    loss = ce_loss(outputs, pngs, weights, num_classes=num_classes)
 
-            if dice_loss_flag:
-                main_dice = dice_loss(outputs, pngs)
-                loss = loss + main_dice
+                if dice_loss_flag:
+                    main_dice = dice_loss(outputs, pngs)
+                    loss = loss + main_dice
 
-            _f_score = f_score(outputs, labels)
+                _f_score = f_score(outputs, labels)
 
-            val_loss += loss.item()
-            val_f_score += _f_score.item()
+                val_loss += loss.item()
+                val_f_score += _f_score.item()
 
-        pbar.set_postfix(**{'val_loss': val_loss / (iteration + 1),
-                            'f_score': val_f_score / (iteration + 1),
-                            'lr': get_lr(optimizer)})
-        pbar.update(1)
+            pbar.set_postfix(**{'val_loss': val_loss / (iteration + 1),
+                                'f_score': val_f_score / (iteration + 1),
+                                'lr': get_lr(optimizer)})
+            pbar.update(1)
+        pbar.close()
+        print('结束评估')
 
-    pbar.close()
-    print('结束评估')
     print('Epoch:' + str(cur_epoch + 1) + '/' + str(total_epoch))
     print('Total Loss: %.3f || Val Loss: %.3f ' % (total_loss / epoch_step, val_loss / epoch_step_val))
     torch.save(model.state_dict(), os.path.join('.', "last_epoch_weights.pth"))

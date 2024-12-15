@@ -4,7 +4,9 @@ import cv2
 import torch
 from PIL import Image
 import random
+
 from util.tools.utils_model import EnumOptimizer
+import colorsys
 
 
 def convert_color(image):
@@ -40,7 +42,12 @@ def get_random_data(image, label, input_shape, jitter=.3, hue=.1, sat=.7, val=.3
     # 获取照片尺寸
     iw, ih = image.size
     # 获取目标尺寸
-    h,w = input_shape
+    w,h = input_shape
+
+    # 如果照片的长和宽均比input_size要大，就先在其中随机裁切一份大小为input_shape的照片
+    # 防止直接缩小丢失过多的细节
+    if iw > w and ih > h:
+        image, label = random_crop_image(image,label, input_shape)
 
     if not random:
         iw, ih = image.size
@@ -219,20 +226,32 @@ def calculate_lf_fit(nbs: int, optimizer_type: EnumOptimizer, batch_size: int, i
 
     return init_lr_fit, min_lr_fit
 
-def gray_image_palette_add(gray_image: PIL.Image.Image, color_map: list) -> PIL.Image.Image:
+def gray_image_palette_add(gray_image: PIL.Image.Image, num_classes: int, auto_colored: bool, color_map: list=[]) -> PIL.Image.Image:
     """
     为灰度图像添加调色板配置文件，使其可以显示为伪色彩图像
-    :param gray_image: 需要添加配置文件的灰度图像
-    :param color_map: 色彩映射表，需要将对应的灰度值映射为什么颜色
-    :return: 伪色彩图像
+    :param gray_image: 要转为伪彩色图像的灰色图像
+    :param num_classes: 总的类别
+    :param auto_colored: 是否启用自动着色
+    :param color_map: 手动指定的[灰度：颜色] 映射表 (启用自动着色后将失效)
+    :return: 单通道伪彩色图片
     """
+    # 颜色映射基表（基表用于给每一个灰度值都设置一个映射，即使灰度没有出现，如果没有基表可能会让图片从8位被优化到更低的位数）
     base_color_map = [
         [i,i,i] for i in range(256)]
 
-    color_map_len = len(color_map)
-    assert color_map_len <= 256, "色彩映射表范围超出灰度空间"
+    if auto_colored:
+        # 自动色彩映射
+        hsv_tuples = [(x / num_classes, 1., 1.) for x in range(num_classes)]
+        color_map = list(map(lambda x: colorsys.hsv_to_rgb(*x), hsv_tuples))
+        color_map = list(map(lambda x: (int(x[0] * 255), int(x[1] * 255), int(x[2] * 255)), color_map))
+    else:
+        # 手动指定映射表
+        color_map_len = len(color_map)
+        assert color_map_len <= 256, "色彩映射表范围超出灰度空间"
+        assert num_classes == color_map_len, "指定的[灰度:颜色]映射表长度和总类别数不一致"
 
-    for i in range(color_map_len):
+
+    for i in range(num_classes):
         base_color_map[i] = color_map[i]
 
     palette = []
@@ -242,4 +261,36 @@ def gray_image_palette_add(gray_image: PIL.Image.Image, color_map: list) -> PIL.
     gray_image.putpalette(palette)
     return gray_image
 
+def resize_image(image: PIL.Image,size):
+    image_w, image_h = image.size
+    w, h = size
 
+    # 计算缩放比和新的长宽
+    scale = min(w/image_w, h/image_h)
+    new_w = int(image_w*scale)
+    new_h = int(image_h*scale)
+
+    # 将原来的图片缩放为新的长宽
+    image = image.resize((new_w, new_h), Image.BICUBIC)
+    new_image = Image.new('RGB', size, (128, 128, 128))
+    new_image.paste(image, ((w - new_w) // 2, (h - new_h) // 2))
+
+    return new_image, new_w, new_h
+
+def random_crop_image(feature, label, size):
+    """
+    将feature和label中对应的随机位置切分大小为size的图片
+    :param feature: feature照片
+    :param label: label照片
+    :param size: 最后要得到的照片大小
+    :return:
+    """
+    iw, ih = feature.size
+    nw, nh = size
+
+    start_x = random.randint(0, iw - nw)
+    start_y = random.randint(0, ih - nh)
+
+    crop_feature = feature.crop((start_x, start_y, start_x + nw, start_y + nh))
+    crop_label = label.crop((start_x, start_y, start_x + nw, start_y + nh))
+    return crop_feature, crop_label

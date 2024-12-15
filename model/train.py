@@ -22,7 +22,7 @@ def train_model():
     backbone_pretrained = config.get_config('model_train', 'backbone_pretrained', ConfigFileType.BOOL)
     backbone_weight_path = config.get_config('model_train', 'backbone_weight_path', ConfigFileType.STR)
     model_weight_path = config.get_config('model_train', 'model_weight_path', ConfigFileType.STR)
-    num_classes = config.get_config('model_train', 'num_classes', ConfigFileType.INT) + 1
+    num_classes = config.get_config('train_data', 'num_classes', ConfigFileType.INT)
     feature_extraction_fun = config.get_config('model_train', 'feature_extraction_fun', ConfigFileType.STR)
     fp16 = config.get_config('model_train', 'fp16', ConfigFileType.BOOL)
     init_epoch = config.get_config('model_train', 'init_epoch', ConfigFileType.INT)
@@ -89,12 +89,12 @@ def train_model():
             model_dict.update(temp_dict)
             model.load_state_dict(model_dict)
 
-            print('\n')
+            print('加载模型预训练权重中，如果有head加载失败是正常现象')
             print(colored(f"成功加载权值key：{load_key[:500]}", "green"))
             print(colored(f"成功加载key的数量为：{len(load_key)}", "green"))
-            print('\n')
             print(colored(f"加载失败权值key：{no_load_key[:500]}", "yellow"))
             print(colored(f"加载失败key的数量为：{len(no_load_key)}", "yellow"))
+
     else:
         # 如果不导入预训练权重
         model = SegFormer(num_classes=num_classes, phi=feature_extraction_fun, pretrained=False)
@@ -154,6 +154,9 @@ def train_model():
 
         if epoch >= freeze_epoch and not unfreeze_flag and freeze_train:
             # 如果是冻结学习，并且到了解冻阶段，则解冻模型
+            print('到达指定周期，将解冻模型')
+
+            unfreeze_flag = True
 
             # 赋值新的batch_size
             batch_size = unfreeze_batch_size
@@ -184,7 +187,6 @@ def train_model():
                                  drop_last=True, collate_fn=seg_dataset_collate, sampler=None,
                                  worker_init_fn=partial(worker_init_fn, rank=0, seed=seed))
 
-            unfreeze_flag = True
 
         set_optimizer_lr(optimizer, lr_scheduler_func, epoch)
         fit_one_epoch(model_train=model_train, model=model, optimizer=optimizer, num_classes=num_classes,
