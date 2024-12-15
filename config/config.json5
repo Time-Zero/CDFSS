@@ -1,0 +1,96 @@
+{
+//  -----------------------------------------基础配置信息----------------------------------------------
+  "base_param": {
+    "cuda_enable": true
+  },
+
+//   ------------------------------------数据集相关配置-----------------------------------------------
+  "train_data": {
+//     数据集存放位置
+    "dataset_path": "E:\\'毕设\\Cross_Domain_Few_Shot_Segmentation_System\\data\\train_data\\FloodNet_768",
+//     数据集中的总类别数（包含背景）
+    "num_classes": 10 ,
+//     数据集划分配置（需要数据集遵循voc标准，拥有JEPGImages和SegmentationClass文件夹，并且对应存放.jpg和.png文件,并且对应名称一致）
+    "annotation": {
+//     是否需要划分（也就是根据JEPGImages和SegmentationClass生成ImageSets和其中的train.txt、val.txt、和test.txt）
+        "need_annotation": false,
+//         划分后train_dataset占比
+        "train_dataset_per": 0.7,
+//         val_dataset占比
+        "val_dataset_per": 0.15,
+//         test_dataset占比
+        "test_dataset_per": 0.15,
+    },
+
+// label图片的色彩配置
+    "colored": {
+//     对灰度图片映射为伪色彩图片是否需要手动指定[灰度:RGB]映射关系
+            "auto_colored": true,
+//             手动指定的灰度和RGB映射关系, 如果手动指定color_map的长度应该num_classes一致，并且不能超过256
+            "color_map": [
+//             灰度值0
+                [0,0,0],
+//             灰度值1
+                [128,0,0],
+//             灰度值2
+                [0,128,0]
+//              ......
+            ]
+        }
+  },
+
+//    -----------------------------------------训练模型的参数---------------------------------------
+    "model_train": {
+//      Dataloader的工作线程数, 如果调大的话,理论上可以缩短加载数据时间
+      "num_workers": 4,
+//      启用fp16，可以一定程度上节约内存
+      "fp16": false,
+//      全局随机数种子
+      "random_seed": 0,
+//      输入到模型图片的尺寸（并不要求图片都是这个尺寸，代码会将图片处理到这个尺寸）
+      "input_shape": [768,768],
+//      模型骨干网络（b0~b5）
+      "backbone": "b0",
+//      是否使用预训练权重 （不建议设置为false，从头训练如果数据集不够大效果很差）
+      "pretrained": true,
+//      是否使用主干网络预训练权重。（true：主干网络使用预训练权重，header不使用；false：使用全局预训练权重）
+      "backbone_pretrained": false,
+//      主干网络预训练权重位置（backbon_pretrained为false，则不强制需要）
+      "backbone_weight_path": "E:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\data\\weights\\segformer_b0_backbone_weights.pth",
+//      全局网络预训练权重（backbone_pretrained为true，则不强制需要）
+      "model_weight_path": "E:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\data\\weights\\segformer_b0_weights_voc.pth",
+//      模型训练过程中的权重文件保存位置
+      "model_save_path": "E:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\data\\saved_weight",
+//      是否采用冻结训练 （先冻结主干网络，让解码单元（分类器）学习，然后再解冻主干网络，特征提取器学习）
+      "freeze_train": true,
+//      开始的epoch，如果训练中途停止，可以加载停止时的权重，同时从当时的epoch开始
+      "init_epoch": 0,
+//      冻结训练多少个epcoh
+      "freeze_epoch": 50,
+//      总的epoch
+      "unfreeze_epoch": 100,
+//      冻结训练时的batch_size
+      "freeze_batch_size": 16,
+//        解冻时的batch_size
+      "unfreeze_batch_size": 8,
+//      初始学习率
+      "init_lr": 1e-4,
+//      最小学习率是初始学习率的多少
+      "min_lr_rate": 0.01,
+//      优化器种类 (支持adamw,adam,sgd(不推荐))
+      "optimizer_type": "adamw",
+//      优化器内部使用的momentum(动量)参数
+      "momentum": 0.9,
+//      权值衰减,可以防止过拟合 (adam可能会导致报错,如果使用adam优化器,此项建议设置为0)
+      "weight_decay": 1e-2,
+//      学习率下降方式,支持step,cos
+      "lr_decay_type": "cos",
+//      建议选项：
+//      种类少（几类）时，设置为True
+//      种类多（十几类）时，如果batch_size比较大（10以上），那么设置为True
+//      种类多（十几类）时，如果batch_size比较小（10以下），那么设置为False
+      "dice_loss": false,
+//      是否使用focal_loss来防止正负样本不均衡
+      "focal_loss": false
+    }
+}

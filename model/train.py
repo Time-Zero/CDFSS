@@ -7,43 +7,37 @@ from torch.backends import cudnn
 from torch.utils.data import DataLoader
 
 from model.segformer.segformer import SegFormer
-from util.config.config_reader import ConfigReader, ConfigFileType
+from util.config.config_reader import ConfigReader
 from util.data.segmentaion_dataset import SegmentationDataset
 from util.tools.utils import *
 from util.tools.utils_model import set_optimizer_lr, get_lr_scheduler, EnumOptimizer, optimizer_select, fit_one_epoch
 
 
 def train_model():
-    # 加载配置项
+    # ---------------------------------------加载配置项-----------------------------------------
     config = ConfigReader()
-    cuda_enable = config.get_config('model_train', 'cuda', ConfigFileType.BOOL)
-    seed = config.get_config('model_train', 'seed', ConfigFileType.INT)
-    pretrained = config.get_config('model_train', 'pretrained', ConfigFileType.BOOL)
-    backbone_pretrained = config.get_config('model_train', 'backbone_pretrained', ConfigFileType.BOOL)
-    backbone_weight_path = config.get_config('model_train', 'backbone_weight_path', ConfigFileType.STR)
-    model_weight_path = config.get_config('model_train', 'model_weight_path', ConfigFileType.STR)
-    num_classes = config.get_config('train_data', 'num_classes', ConfigFileType.INT)
-    feature_extraction_fun = config.get_config('model_train', 'feature_extraction_fun', ConfigFileType.STR)
-    fp16 = config.get_config('model_train', 'fp16', ConfigFileType.BOOL)
-    init_epoch = config.get_config('model_train', 'init_epoch', ConfigFileType.INT)
-    freeze_epoch = config.get_config('model_train', 'freeze_epoch', ConfigFileType.INT)
-    unfreeze_epoch = config.get_config('model_train', 'unfreeze_epoch', ConfigFileType.INT)
-    freeze_train = config.get_config('model_train', 'freeze_train', ConfigFileType.BOOL)
-    freeze_batch_size = config.get_config('model_train', 'freeze_batch_size', ConfigFileType.INT)
-    unfreeze_batch_size = config.get_config('model_train', 'unfreeze_batch_size', ConfigFileType.INT)
-    init_lr = config.get_config('model_train', 'init_lr', ConfigFileType.FLOAT)
-    dataset_path = config.get_config('train_data', 'path', ConfigFileType.STR)
-    optimizer_type = config.get_config('model_train', 'optimizer_type', ConfigFileType.STR)
-    min_lr_rate = config.get_config('model_train', 'min_lr_rate', ConfigFileType.FLOAT)
-    momentum = config.get_config('model_train', 'momentum', ConfigFileType.FLOAT)
-    weight_decay = config.get_config('model_train', 'weight_decay', ConfigFileType.FLOAT)
-    lr_decay_type = config.get_config('model_train', 'lr_decay_type', ConfigFileType.STR)
-    input_shape_str = config.get_config('model_train', 'input_shape', ConfigFileType.STR)
-    input_shape = list(map(int, input_shape_str.split(',')))
-    num_workers = config.get_config('model_train', 'num_workers', ConfigFileType.INT)
-    dice_loss = config.get_config('model_train', 'dice_loss', ConfigFileType.BOOL)
-    focal_loss = config.get_config('model_train', 'focal_loss', ConfigFileType.BOOL)
+    num_classes = config.get_num_classes()
+    dataset_path = config.get_dataset_path()
+    seed = config.get_random_seed()
+    cuda_enable = config.get_cuda_enable()
+    pretrained, backbone_pretrained = config.get_pretrained_param()
+    backbone_weight_path = config.get_backbone_weight_path()
+    model_weight_path = config.get_model_weight_path()
+    backbone = config.get_backbone()
+    fp16 = config.fp16_enable()
+    freeze_train = config.is_freeze_train()
+    init_epoch, freeze_epoch, unfreeze_epoch, freeze_batch_size, unfreeze_batch_size = config.get_epoch_param()
+    init_lr, min_lr = config.get_lr_param()
+    optimizer_type, momentum = config.get_optimizer_param()
+    weight_decay = config.get_weight_decay()
+    lr_decay_type = config.get_lr_decay_type()
+    input_shape = config.get_input_shape()
+    num_workers = config.get_num_workers()
+    dice_loss = config.dice_loss_enable()
+    focal_loss = config.focal_loss_enable()
+    model_save_path = config.get_model_save_path()
 
+    # 类偏置权重
     cls_weights = np.ones([num_classes], np.float32)
 
     # 读取train_lines和val_lines
@@ -62,14 +56,14 @@ def train_model():
     # 初始化随机数种子
     random_seed_init(seed)
 
-    # 选择计算设备
+    # -----------------------------------选择计算设备-----------------------------
     device = torch.device('cpu')
     if cuda_enable:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         if device.type == 'cpu':
             print(colored('警告：gpu不可用，正在使用cpu运算！！！', 'red'))
 
-    # 预训练权重导入
+    # -----------------------------预训练权重导入--------------------------
     if pretrained:
         # 如果导入预训练权重
         if backbone_pretrained:
@@ -77,11 +71,14 @@ def train_model():
             if not os.path.exists(backbone_weight_path):
                 raise ValueError('主干网络预训练权重文件不存在，请检查')
 
-            model = SegFormer(num_classes=num_classes, phi=feature_extraction_fun, pretrained=backbone_pretrained,
+            model = SegFormer(num_classes=num_classes, phi=backbone, pretrained=backbone_pretrained,
                               backbone_weight_path=backbone_weight_path)
         else:
+            if not os.path.exists(model_weight_path):
+                raise ValueError('模型预训练权重不存在,请检查')
+
             # 加载全局预训练权重
-            model = SegFormer(num_classes=num_classes, phi=feature_extraction_fun, pretrained=backbone_pretrained)
+            model = SegFormer(num_classes=num_classes, phi=backbone, pretrained=backbone_pretrained)
             model_dict = model.state_dict()
             load_key, no_load_key, temp_dict = pretrained_weight_load(model_dict=model_dict,
                                                                       weight_path=model_weight_path, device=device)
@@ -89,7 +86,9 @@ def train_model():
             model_dict.update(temp_dict)
             model.load_state_dict(model_dict)
 
+            print('-'*16)
             print('加载模型预训练权重中，如果有head加载失败是正常现象')
+            print('-'*16)
             print(colored(f"成功加载权值key：{load_key[:500]}", "green"))
             print(colored(f"成功加载key的数量为：{len(load_key)}", "green"))
             print(colored(f"加载失败权值key：{no_load_key[:500]}", "yellow"))
@@ -97,9 +96,9 @@ def train_model():
 
     else:
         # 如果不导入预训练权重
-        model = SegFormer(num_classes=num_classes, phi=feature_extraction_fun, pretrained=False)
+        model = SegFormer(num_classes=num_classes, phi=backbone, pretrained=False)
 
-    # 启用混合精度
+    # --------------------------启用混合精度--------------------------
     if fp16:
         scaler = GradScaler()
     else:
@@ -121,7 +120,6 @@ def train_model():
     optimizer_type = {'adam': EnumOptimizer.ADAM,
                       'adamw': EnumOptimizer.ADAMW,
                       'sgd': EnumOptimizer.SGD}[optimizer_type]
-    min_lr = init_lr * min_lr_rate
     init_lr_fit, min_lr_fit = calculate_lf_fit(nbs=16, optimizer_type=optimizer_type, batch_size=batch_size,
                                                init_lr=init_lr, min_lr=min_lr)
 
@@ -186,7 +184,6 @@ def train_model():
                                  pin_memory=True,
                                  drop_last=True, collate_fn=seg_dataset_collate, sampler=None,
                                  worker_init_fn=partial(worker_init_fn, rank=0, seed=seed))
-
 
         set_optimizer_lr(optimizer, lr_scheduler_func, epoch)
         fit_one_epoch(model_train=model_train, model=model, optimizer=optimizer, num_classes=num_classes,

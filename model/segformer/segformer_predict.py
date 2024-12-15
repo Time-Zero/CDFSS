@@ -3,7 +3,6 @@ import copy
 
 import cv2
 import numpy as np
-from anyio import sleep_forever
 
 from segformer import *
 from PIL import Image
@@ -12,7 +11,7 @@ from util.tools.utils import convert_color, resize_image, preprocess_image
 
 class SegformerPredict(object):
     def __init__(self, args: tuple):
-        (self.cuda, self.model_path, self.mode, self.num_classes,
+        (self.cuda, self.model_path, self.num_classes,
          self.auto_colored, self.color_map, self.feature_extraction_fun,
          self.input_shape, self.mix_type) = args
         self.net = None
@@ -115,6 +114,3 @@ class SegformerPredict(object):
             image = Image.fromarray(np.uint8(seg_img))
 
         return image
-if __name__ == '__main__':
-    args = (True, "E:\毕设\Cross_Domain_Few_Shot_Segmentation_System\data\weights\segformer_b0_backbone_weights.pth",
-            0, 10, True, [],'b0', [512,512], 0)

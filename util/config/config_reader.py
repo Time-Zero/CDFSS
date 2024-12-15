@@ -1,51 +1,147 @@
-import configparser
+from util.tools.singleton import singleton
+import json5
 import os
-from util.tools.singleton import *
-from enum import Enum
 
-class ConfigFileType(Enum):
-    INT = 1
-    FLOAT = 2
-    STR = 3
-    BOOL = 4
-
-INIT_CONFIG_FILE_PATH="E:\毕设\Cross_Domain_Few_Shot_Segmentation_System\config\config.ini"
 
 @singleton
 class ConfigReader:
     def __init__(self):
-        print("加载配置文件中")
-        self.config_file_path = INIT_CONFIG_FILE_PATH
-        self.config = None
-        if not os.path.exists(self.config_file_path):
-            raise ValueError("配置文件不存在，请检查配置文件路径")
-
+        self.config_path = "E:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\config\\config.json5"
+        self.data = None
         self.read_config()
-        print("加载配置文件完成")
 
     def read_config(self):
-        self.config = configparser.ConfigParser()
-        self.config.read(INIT_CONFIG_FILE_PATH, encoding="utf-8")
+        if not os.path.exists(self.config_path):
+            raise FileNotFoundError('配置文件不存在，请检查文件路径')
 
-    def get_config(self, section: str, option: str, type: ConfigFileType):
-        match type:
-            case ConfigFileType.INT:
-                return self.config.getint(section, option)
-            case ConfigFileType.FLOAT:
-                return self.config.getfloat(section, option)
-            case ConfigFileType.STR:
-                return self.config.get(section, option)
-            case ConfigFileType.BOOL:
-                return self.config.getboolean(section, option)
-            case _:
-                raise ValueError("你需要返回的类型不合法")
+        with open(self.config_path, 'r', encoding='utf-8') as f:
+            config_content = f.read()
+
+        try:
+            self.data = json5.loads(config_content)
+        except Exception as e:
+            print(f'配置文件解析失败: {e}')
+
+    def get_dataset_path(self):
+        return self.data['train_data']['dataset_path']
+
+    def get_num_classes(self):
+        return self.data['train_data']['num_classes']
+
+    def need_annotation(self):
+        return self.data['train_data']['annotation']['need_annotation']
+
+    def annotation_percent(self):
+        train_data_per = self.data['train_data']['annotation']['train_dataset_per']
+        val_data_per = self.data['train_data']['annotation']['val_dataset_per']
+        test_data_per = self.data['train_data']['annotation']['test_dataset_per']
+
+        if train_data_per + val_data_per + test_data_per != 1.:
+            raise ValueError('train,val,test数据比例划分错误，三者之和应该为1')
+
+        return train_data_per, val_data_per, test_data_per
+
+    def auto_colored(self):
+        return self.data['train_data']['colored']['auto_colored']
+
+    def get_color_map(self):
+        return self.data['train_data']['colored']['color_map']
+
+    def get_num_workers(self):
+        return self.data['model_train']['num_workers']
+
+    def fp16_enable(self):
+        return self.data['model_train']['fp16']
+
+    def get_random_seed(self):
+        return self.data['model_train']['random_seed']
+
+    def get_input_shape(self):
+        return self.data['model_train']['input_shape']
+
+    def get_backbone(self):
+        return self.data['model_train']['backbone']
+
+    def get_pretrained_param(self):
+        pretrained = self.data['model_train']['pretrained']
+        backbone_pretrained = self.data['model_train']['backbone_pretrained']
+
+        return pretrained, backbone_pretrained
+
+    def get_backbone_weight_path(self):
+        return self.data['model_train']['backbone_weight_path']
+
+    def get_model_weight_path(self):
+        return self.data['model_train']['model_weight_path']
+
+    def get_model_save_path(self):
+        return self.data['model_train']['model_save_path']
+
+    def is_freeze_train(self):
+        return self.data['model_train']['freeze_train']
+
+    def get_epoch_param(self):
+        init_epoch = self.data['model_train']['init_epoch']
+        freeze_epoch = self.data['model_train']['freeze_epoch']
+        unfreeze_epoch = self.data['model_train']['unfreeze_epoch']
+        freeze_batch_size = self.data['model_train']['freeze_batch_size']
+        unfreeze_batch_size = self.data['model_train']['unfreeze_batch_size']
+
+        return init_epoch, freeze_epoch, unfreeze_epoch, freeze_batch_size, unfreeze_batch_size
+
+    def get_lr_param(self):
+        init_lr = self.data['model_train']['init_lr']
+        min_lr_rate = self.data['model_train']['min_lr_rate']
+
+        min_lr = init_lr * min_lr_rate
+
+        return init_lr, min_lr
+
+    def get_optimizer_param(self):
+        optimizer_type = self.data['model_train']['optimizer_type']
+        momentum = self.data['model_train']['momentum']
+
+        return optimizer_type, momentum
+
+    def get_weight_decay(self):
+        return self.data['model_train']['weight_decay']
+
+    def get_lr_decay_type(self):
+        return self.data['model_train']['lr_decay_type']
+
+    def dice_loss_enable(self):
+        return self.data['model_train']['dice_loss']
+
+    def focal_loss_enable(self):
+        return self.data['model_train']['focal_loss']
+
+    def get_cuda_enable(self):
+        return self.data['base_param']['cuda_enable']
+
 
 if __name__ == '__main__':
     config = ConfigReader()
-    print(config.get_config('train_data','path',ConfigFileType.STR))
-    print(type(config.get_config('train_data','path',ConfigFileType.STR)))
-    print(type(config.get_config('train_data','trainval_percent',ConfigFileType.INT)))
-    print(type(config.get_config('train_data','need_annotation',ConfigFileType.BOOL)))
-    print(type(config.get_config('train_data','train_percent',ConfigFileType.FLOAT)))
-
-
+    print(config.get_dataset_path())
+    print(config.get_num_classes())
+    print(config.need_annotation())
+    print(config.annotation_percent())
+    print(config.auto_colored())
+    print(config.get_color_map())
+    print(config.get_num_workers())
+    print(config.fp16_enable())
+    print(config.get_random_seed())
+    print(config.get_input_shape())
+    print(config.get_backbone())
+    print(config.get_pretrained_param())
+    print(config.get_backbone_weight_path())
+    print(config.get_model_weight_path())
+    print(config.get_model_save_path())
+    print(config.is_freeze_train())
+    print(config.get_epoch_param())
+    print(config.get_lr_param())
+    print(config.get_optimizer_param())
+    print(config.get_weight_decay())
+    print(config.get_lr_decay_type())
+    print(config.dice_loss_enable())
+    print(config.focal_loss_enable())
+    print(config.get_cuda_enable())
