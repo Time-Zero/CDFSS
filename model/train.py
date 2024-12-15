@@ -36,6 +36,7 @@ def train_model():
     dice_loss = config.dice_loss_enable()
     focal_loss = config.focal_loss_enable()
     model_save_path = config.get_model_save_path()
+    val_epoch = config.get_val_epoch()
 
     # 类偏置权重
     cls_weights = np.ones([num_classes], np.float32)
@@ -190,4 +191,4 @@ def train_model():
                       cur_epoch=epoch, epoch_step=epoch_step, epoch_step_val=epoch_step_val, gen=gen,
                       gen_val=gen_val, total_epoch=unfreeze_epoch, cuda_enable=cuda_enable,
                       focal_loss_flag=focal_loss, dice_loss_flag=dice_loss, cls_weights=cls_weights,
-                      fp16=fp16, scaler=scaler)
+                      fp16=fp16, scaler=scaler, val_epoch=val_epoch, model_save_path=model_save_path)

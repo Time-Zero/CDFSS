@@ -10,17 +10,26 @@ from PIL import Image
 from util.tools.utils import convert_color, resize_image, preprocess_image
 
 class SegformerPredict(object):
-    def __init__(self, args: tuple):
-        (self.cuda, self.model_path, self.num_classes,
-         self.auto_colored, self.color_map, self.feature_extraction_fun,
-         self.input_shape, self.mix_type) = args
+    def __init__(self, cuda, model_path, num_classes, auto_colored, color_map, backbone, input_shape, mix_type):
+        self.cuda = cuda
+        self.model_path = model_path
+        self.num_classes = num_classes
+        self.auto_colored = auto_colored
+        self.color_map = color_map
+        self.backbone = backbone
+        self.input_shape = input_shape
+        self.mix_type = mix_type
+
         self.net = None
 
+        # ------------------是否启用自动色彩映射----------------
         if self.auto_colored:
+            # 通过num_classes计算一个自动的色彩映射
             hsv_tuples = [(x / self.num_classes, 1., 1.) for x in range(self.num_classes)]
             color_map = list(map(lambda x: colorsys.hsv_to_rgb(*x), hsv_tuples))
             self.color_map = list(map(lambda x: (int(x[0] * 255), int(x[1] * 255), int(x[2] * 255)), color_map))
         else:
+            # 使用指定的色彩映射
             color_map_len = len(self.color_map)
             assert self.num_classes == color_map_len, '色彩映射表和总类别长度不一致'
             assert color_map_len <= 256, '色彩映射表长度超过灰度范围'
@@ -33,7 +42,7 @@ class SegformerPredict(object):
         :return:
         """
         device = torch.device('cuda' if torch.cuda.is_available() and self.cuda else 'cpu')
-        self.net = SegFormer(num_classes=self.num_classes, phi=self.feature_extraction_fun, pretrained=False)
+        self.net = SegFormer(num_classes=self.num_classes, phi=self.backbone, pretrained=False)
         self.net.load_state_dict(torch.load(self.model_path, map_location=device))
         self.net = self.net.eval()
         self.net = torch.nn.DataParallel(self.net)

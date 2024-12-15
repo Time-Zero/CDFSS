@@ -73,6 +73,8 @@
       "freeze_batch_size": 16,
 //        解冻时的batch_size
       "unfreeze_batch_size": 8,
+//      每隔多少个epoch执行一次val
+      "eval_epoch": 5,
 //      初始学习率
       "init_lr": 1e-4,
 //      最小学习率是初始学习率的多少
@@ -92,5 +94,34 @@
       "dice_loss": false,
 //      是否使用focal_loss来防止正负样本不均衡
       "focal_loss": false
-    }
+    },
+
+  "predict_param": {
+//    模式
+    "mode": 'predict',
+//    是否启用cuda
+    "cuda_enable": true,
+//    模型权重文件路径
+    "model_weight_path": "aa",
+//    数据集中的总类别(含背景)
+    "num_classes": 10,
+//    使用的骨干网络规模 (b0~b5)
+    "backbone": "b0",
+//    输入到模型的图像尺寸 (建议不要和数据集中的原图尺寸差距过大,不然容易丢失细节)
+    "input_shape": [768,768],
+//      mix_type参数用于控制检测结果的可视化方式:
+//        mix_type = 0的时候代表原图与生成的图进行混合
+//        mix_type = 1的时候代表仅保留生成的图
+//        mix_type = 2的时候代表仅扣去背景，仅保留原图中的目标
+      "mix_type":0,
+//    是否统计预测结果中不同类别的像素的个数
+    "count": false,
+    "classes_name":[
+//      灰度0的像素类别
+      "background",
+//      灰度1的像素类别
+      "grass"
+//      ....
+    ]
+  }
 }

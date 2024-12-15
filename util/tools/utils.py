@@ -8,6 +8,8 @@ import random
 from util.tools.utils_model import EnumOptimizer
 import colorsys
 
+from colorama import Fore, Style
+
 
 def convert_color(image):
     """
@@ -270,8 +272,17 @@ def gray_image_palette_add(gray_image: PIL.Image.Image, num_classes: int, auto_c
 
 
 def resize_image(image: PIL.Image, size):
+    """
+    predict模块中使用的图像缩放
+    :param image: 待处理的图像
+    :param size: 目标尺寸
+    :return:
+    """
     image_w, image_h = image.size
     w, h = size
+
+    if (image_w > (w * 2) and image_h > (h * 2)) or (image_w < w /2 and image_h < h/2):
+        print(Fore.YELLOW + '注意: predict中输入的图像和目标尺寸差距过大, 可能会丢失细节' + Style.RESET_ALL)
 
     # 计算缩放比和新的长宽
     scale = min(w / image_w, h / image_h)

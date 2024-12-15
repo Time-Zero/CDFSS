@@ -118,6 +118,35 @@ class ConfigReader:
     def get_cuda_enable(self):
         return self.data['base_param']['cuda_enable']
 
+    def get_val_epoch(self):
+        return self.data['model_train']['eval_epoch']
+
+    def get_predict_cuda_enable(self):
+        return self.data['predict_param']['cuda_enable']
+
+    def get_predict_weight_path(self):
+        return self.data['predict_param']['model_weight_path']
+
+    def get_predict_num_classes(self):
+        return self.data['predict_param']['num_classes']
+
+    def get_predict_backbone(self):
+        return self.data['predict_param']['backbone']
+
+    def get_predict_input_shape(self):
+        return self.data['predict_param']['input_shape']
+
+    def get_predict_mix_type(self):
+        return self.data['predict_param']['mix_type']
+
+    def get_predict_mode(self):
+        return self.data['predict_param']['mode']
+
+    def is_count_pixel(self):
+        return self.data['predict_param']['count']
+
+    def get_classes_name(self):
+        return self.data['predict_param']['classes_name']
 
 if __name__ == '__main__':
     config = ConfigReader()
@@ -145,3 +174,13 @@ if __name__ == '__main__':
     print(config.dice_loss_enable())
     print(config.focal_loss_enable())
     print(config.get_cuda_enable())
+    print(config.get_val_epoch())
+    print(config.get_predict_cuda_enable())
+    print(config.get_predict_weight_path())
+    print(config.get_predict_num_classes())
+    print(config.get_predict_backbone())
+    print(config.get_predict_input_shape())
+    print(config.get_predict_mix_type())
+    print(config.get_predict_mode())
+    print(config.is_count_pixel())
+    print(config.get_classes_name())

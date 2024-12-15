@@ -112,9 +112,9 @@ def optimizer_select(optimizer_type: EnumOptimizer, model: nn.Module, init_lr_fi
     return optimizer
 
 
-def fit_one_epoch(model_train, model, optimizer, num_classes, cur_epoch, epoch_step, epoch_step_val, gen, gen_val,
-                  total_epoch,
-                  cuda_enable, focal_loss_flag, dice_loss_flag, cls_weights, fp16, scaler):
+def fit_one_epoch(model_train, model, optimizer, num_classes, cur_epoch,
+                  epoch_step, epoch_step_val, gen, gen_val,total_epoch,cuda_enable,
+                  focal_loss_flag, dice_loss_flag, cls_weights, fp16, scaler, val_epoch, model_save_path):
     total_loss = 0.0
     total_f_score = 0.0
 
@@ -195,7 +195,7 @@ def fit_one_epoch(model_train, model, optimizer, num_classes, cur_epoch, epoch_s
     pbar.close()
     print('训练结束')
 
-    if cur_epoch % 5 == 0:
+    if cur_epoch % val_epoch == 0:
         print('开始评估')
         pbar = tqdm(total=epoch_step_val, desc=f'Epoch {cur_epoch + 1}/{total_epoch}', postfix=dict, mininterval=0.3)
         model_train.eval()
@@ -239,4 +239,4 @@ def fit_one_epoch(model_train, model, optimizer, num_classes, cur_epoch, epoch_s
 
     print('Epoch:' + str(cur_epoch + 1) + '/' + str(total_epoch))
     print('Total Loss: %.3f || Val Loss: %.3f ' % (total_loss / epoch_step, val_loss / epoch_step_val))
-    torch.save(model.state_dict(), os.path.join('.', "last_epoch_weights.pth"))
+    torch.save(model.state_dict(), os.path.join(model_save_path, f"epoch_{cur_epoch}_weights.pth"))
