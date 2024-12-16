@@ -1,7 +1,9 @@
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
+
 from .backbone import mit_b0, mit_b1, mit_b2, mit_b3, mit_b4, mit_b5
+
 
 class MLP(nn.Module):
     def __init__(self, input_dim=2048, embed_dim=768):

@@ -3,6 +3,7 @@ from PIL import Image
 from model.segformer.segformer_predict import SegformerPredict
 from util.config.config_reader import *
 
+
 def predict():
     config = ConfigReader()
     mode = config.get_predict_mode()
@@ -38,8 +39,12 @@ def predict():
             try:
                 img = Image.open(img_path)
             except Exception as e:
-                print(f"文件路径存在问题: {e}")
+                print(f"无法打开文件: {e}")
                 continue
             else:
                 r_image = segformer.detect_image(img, count, classes_name)
+                r_image.show()
+
+if __name__ == '__main__':
+    predict()
 

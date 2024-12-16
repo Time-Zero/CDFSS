@@ -1,11 +1,12 @@
 from functools import partial
+
 import torch
-from torch import nn, optim
-from torch.utils.data import DataLoader
-from util.tools.utils import seg_dataset_collate, worker_init_fn
-from util.data.segmentaion_dataset import *
-from model.segformer.segformer import SegFormer
 import torch.nn.functional as F
+from torch import nn
+from torch.utils.data import DataLoader
+
+from util.data.segmentaion_dataset import *
+from util.tools.utils import seg_dataset_collate, worker_init_fn
 
 
 def CE_Loss(inputs, target, cls_weights, num_classes=21):

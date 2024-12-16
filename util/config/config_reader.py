@@ -1,6 +1,8 @@
-from util.tools.singleton import singleton
-import json5
 import os
+
+import json5
+
+from util.tools.singleton import singleton
 
 
 @singleton

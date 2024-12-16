@@ -1,8 +1,10 @@
 import os
+
 import numpy as np
 from PIL import Image
-from util.tools.utils import get_random_data, preprocess_image
 from torch.utils.data.dataset import Dataset
+
+from util.tools.utils import get_random_data, preprocess_image
 
 
 class SegmentationDataset(Dataset):

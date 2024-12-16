@@ -3,11 +3,13 @@ import copy
 
 import cv2
 import numpy as np
-
-from segformer import *
+import torch
+import torch.nn.functional as F
 from PIL import Image
 
+from model.segformer.segformer import SegFormer
 from util.tools.utils import convert_color, resize_image, preprocess_image
+
 
 class SegformerPredict(object):
     def __init__(self, cuda, model_path, num_classes, auto_colored, color_map, backbone, input_shape, mix_type):
@@ -43,7 +45,7 @@ class SegformerPredict(object):
         """
         device = torch.device('cuda' if torch.cuda.is_available() and self.cuda else 'cpu')
         self.net = SegFormer(num_classes=self.num_classes, phi=self.backbone, pretrained=False)
-        self.net.load_state_dict(torch.load(self.model_path, map_location=device))
+        self.net.load_state_dict(torch.load(self.model_path, map_location=device, weights_only=True))
         self.net = self.net.eval()
         self.net = torch.nn.DataParallel(self.net)
         self.net = self.net.cuda()

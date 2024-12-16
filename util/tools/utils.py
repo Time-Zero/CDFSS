@@ -1,14 +1,14 @@
-import PIL
-import numpy as np
-import cv2
-import torch
-from PIL import Image
+import colorsys
 import random
 
-from util.tools.utils_model import EnumOptimizer
-import colorsys
-
+import PIL
+import cv2
+import numpy as np
+import torch
+from PIL import Image
 from colorama import Fore, Style
+
+from util.tools.utils_model import EnumOptimizer
 
 
 def convert_color(image):
