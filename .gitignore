@@ -1,1 +1,9 @@
-/back
+.idea
+data/dataset/*
+!data/dataset/README.md
+data/weights/*
+!data/weights/README.md
+results/*
+!results/README.md
+logs/*
+!logs/README.md

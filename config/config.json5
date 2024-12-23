@@ -93,6 +93,17 @@
         //    输入模型的大小(w,h)
         "input_size": [768, 768],
         //    预训练参数配置
+    },
+    "train": {
+        //  是否使用focal loss来防止正负样本不平衡
+        "focal_loss": false,
+        //  建议选项：
+        //      种类少（几类）时，设置为True
+        //      种类多（十几类）时，如果batch_size比较大（10以上），那么设置为True
+        //      种类多（十几类）时，如果batch_size比较小（10以下），那么设置为False
+        "dice_loss": false,
+        "eval_freq": 5,
+        "log_dir": "E:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\logs",
         "pretrained": {
             //  是否启用预训练参数
             "enable": true,

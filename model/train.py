@@ -1,3 +1,4 @@
+import datetime
 import os
 import platform
 from functools import partial
@@ -13,6 +14,7 @@ from torch.cuda.amp import GradScaler
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader
 
+from model.loss_history import LossHistory
 from model.segformer import SegFormer
 from model.segmentaion_dataset import SegmentationDataset
 from utils.config_reader import ConfigReader
@@ -122,6 +124,14 @@ def train(rank):
                 print(f'加载失败的权重数量为: {len(no_load_key)}' + Style.RESET_ALL)
                 print(Fore.BLUE + f'head有权重加载失败是正常的' + Style.RESET_ALL)
 
+    # -------------------------------------- 启用tensorboard---------------------------------
+    if rank == 0:
+        time_str = datetime.datetime.strftime(datetime.datetime.now(), '%Y_%m_%d_%H_%M_%S')
+        log_dir = os.path.join(config.get_log_dir(), "loss_" + str(time_str))
+        loss_history = LossHistory(log_dir, model, config.get_input_size())
+    else:
+        loss_history = None
+
     # ------------------------------------- 是否启用fp16---------------------------------
     if config.get_fp16():
         scaler = GradScaler()
@@ -223,6 +233,7 @@ def train(rank):
                          drop_last=True, collate_fn=seg_dataset_collate, sampler=val_sampler,
                          worker_init_fn=partial(worker_init_fn, rank=rank, seed=seed))
 
+    dist.barrier()
     for epoch in range(init_epoch, unfreeze_epoch):
         # 当进入解冻阶段，重新设置参数
         if epoch >= freeze_epoch and not unfreeze_flag and freeze_train:
@@ -267,9 +278,13 @@ def train(rank):
         fit_one_epoch(rank=rank,model_train=model_train,model=model,num_classes=num_classes,cur_epoch=epoch,
                       epoch_step=epoch_step, epoch_step_val=epoch_step_val,gen=gen,gen_val=gen_val,
                       total_epoch=unfreeze_epoch,cls_weights=cls_weight,cuda_enable=config.cuda_enable,
-                      optimizer=optimizer,fp16_enable=config.get_fp16(),focal_loss_enable=False,dice_loss_enable=False,
-                      scaler=scaler,eval_freq=5)
+                      optimizer=optimizer,fp16_enable=config.get_fp16(),focal_loss_enable=config.focal_loss_enable(),
+                      dice_loss_enable=config.dice_loss_enable(),scaler=scaler,eval_freq=config.eval_freq(),
+                      loss_history=loss_history,)
 
         if config.get_cuda_mode() == 'ddp':
             dist.barrier()
+
+    if rank == 0:
+        loss_history.writer.close()
 

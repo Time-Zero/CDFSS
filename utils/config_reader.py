@@ -51,22 +51,40 @@ class ConfigReader:
         self.__cuda_visible_device = self.data['model']['cuda_param']['visible_device']
         self.__cuda_master_gpu = self.data['model']['cuda_param']['master_gpu']
         self.__phi = self.data['model']['phi']
-        self.__pretrained = self.data['model']['pretrained']['enable']
-        self.__pretrained_weight = self.data['model']['pretrained']['weight']
-        self.__pretrained_weight_path = self.data['model']['pretrained']['weight_path']
-        self.__freeze_train_enable = self.data['model']['freeze_train']['enable']
-        self.__init_epoch = self.data['model']['freeze_train']['init_epoch']
-        self.__freeze_epoch = self.data['model']['freeze_train']['freeze_epoch']
-        self.__freeze_batch_size = self.data['model']['freeze_train']['freeze_batch_size']
-        self.__unfreeze_epoch = self.data['model']['freeze_train']['unfreeze_epoch']
-        self.__unfreeze_batch_size = self.data['model']['freeze_train']['unfreeze_batch_size']
-        self.__init_lr = self.data['model']['lr_param']['init_lr']
-        self.__min_lr_ratio = self.data['model']['lr_param']['min_lr_ratio']
-        self.__optimizer_type = self.data['model']['optimizer_param']['optimizer_type']
-        self.__momentum = self.data['model']['optimizer_param']['momentum']
-        self.__weight_decay = self.data['model']['optimizer_param']['weight_decay']
-        self.__lr_decay_type = self.data['model']['lr_param']['lr_decay_type']
         self.__input_size = self.data['model']['input_size']
+
+        # ------------------------------train------------------------------------------
+        self.__focal_loss = self.data['train']['focal_loss']
+        self.__dice_loss = self.data['train']['dice_loss']
+        self.__eval_freq = self.data['train']['eval_freq']
+        self.__pretrained = self.data['train']['pretrained']['enable']
+        self.__pretrained_weight = self.data['train']['pretrained']['weight']
+        self.__pretrained_weight_path = self.data['train']['pretrained']['weight_path']
+        self.__freeze_train_enable = self.data['train']['freeze_train']['enable']
+        self.__init_epoch = self.data['train']['freeze_train']['init_epoch']
+        self.__freeze_epoch = self.data['train']['freeze_train']['freeze_epoch']
+        self.__freeze_batch_size = self.data['train']['freeze_train']['freeze_batch_size']
+        self.__unfreeze_epoch = self.data['train']['freeze_train']['unfreeze_epoch']
+        self.__unfreeze_batch_size = self.data['train']['freeze_train']['unfreeze_batch_size']
+        self.__init_lr = self.data['train']['lr_param']['init_lr']
+        self.__min_lr_ratio = self.data['train']['lr_param']['min_lr_ratio']
+        self.__optimizer_type = self.data['train']['optimizer_param']['optimizer_type']
+        self.__momentum = self.data['train']['optimizer_param']['momentum']
+        self.__weight_decay = self.data['train']['optimizer_param']['weight_decay']
+        self.__lr_decay_type = self.data['train']['lr_param']['lr_decay_type']
+        self.__log_dir = self.data['train']['log_dir']
+
+    def get_log_dir(self):
+        return self.__log_dir
+
+    def focal_loss_enable(self):
+        return self.__focal_loss
+
+    def dice_loss_enable(self):
+        return self.__dice_loss
+
+    def eval_freq(self):
+        return self.__eval_freq
 
     def get_input_size(self):
         return self.__input_size
