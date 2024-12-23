@@ -1,194 +1,275 @@
 import os
+import platform
 from functools import partial
 
-from termcolor import colored
-from torch.amp import GradScaler
+import numpy as np
+import torch
+import torch.distributed as dist
+import torch.multiprocessing as mp
+from colorama import Fore, Style
+from torch import optim
 from torch.backends import cudnn
+from torch.cuda.amp import GradScaler
+from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader
 
-from model.segformer.segformer import SegFormer
-from util.config.config_reader import ConfigReader
-from util.data.segmentaion_dataset import SegmentationDataset
-from util.tools.utils import *
-from util.tools.utils_model import set_optimizer_lr, get_lr_scheduler, EnumOptimizer, optimizer_select, fit_one_epoch
+from model.segformer import SegFormer
+from model.segmentaion_dataset import SegmentationDataset
+from utils.config_reader import ConfigReader
+from utils.utils_model import random_seed_init, get_lr_scheduler, seg_dataset_collate, worker_init_fn, set_optimizer_lr, \
+    fit_one_epoch
 
 
-def train_model():
-    # ---------------------------------------加载配置项-----------------------------------------
+def train_controller():
     config = ConfigReader()
-    num_classes = config.get_num_classes()
-    dataset_path = config.get_dataset_path()
-    seed = config.get_random_seed()
-    cuda_enable = config.get_cuda_enable()
-    pretrained, backbone_pretrained = config.get_pretrained_param()
-    backbone_weight_path = config.get_backbone_weight_path()
-    model_weight_path = config.get_model_weight_path()
-    backbone = config.get_backbone()
-    fp16 = config.fp16_enable()
-    freeze_train = config.is_freeze_train()
-    init_epoch, freeze_epoch, unfreeze_epoch, freeze_batch_size, unfreeze_batch_size = config.get_epoch_param()
-    init_lr, min_lr = config.get_lr_param()
-    optimizer_type, momentum = config.get_optimizer_param()
-    weight_decay = config.get_weight_decay()
-    lr_decay_type = config.get_lr_decay_type()
-    input_shape = config.get_input_shape()
-    num_workers = config.get_num_workers()
-    dice_loss = config.dice_loss_enable()
-    focal_loss = config.focal_loss_enable()
-    model_save_path = config.get_model_save_path()
-    val_epoch = config.get_val_epoch()
 
-    # 类偏置权重
-    cls_weights = np.ones([num_classes], np.float32)
+    if not config.cuda_enable():
+        train(0)
+    else:
+        cuda_mode = config.get_cuda_mode()
+        os.environ['CUDA_VISIBLE_DEVICES'] = ",".join(map(str, config.get_cuda_visible_gpus()))
 
-    # 读取train_lines和val_lines
-    train_path = os.path.join(dataset_path, 'ImageSets/Segmentation/train.txt')
-    val_path = os.path.join(dataset_path, 'ImageSets/Segmentation/val.txt')
-    if not os.path.exists(train_path) or not os.path.exists(val_path):
-        raise ValueError('train.txt或val.txt不存在，请检查项目文件结构，或运行数据标注模式生成')
-
-    with open(train_path, 'r', encoding='utf-8') as f:
-        train_lines = f.readlines()
-    with open(val_path, 'r', encoding='utf-8') as f:
-        val_lines = f.readlines()
-    num_train = len(train_lines)  # 训练数据总数
-    num_val = len(val_lines)  # 测试数据总数
-
-    # 初始化随机数种子
-    random_seed_init(seed)
-
-    # -----------------------------------选择计算设备-----------------------------
-    device = torch.device('cpu')
-    if cuda_enable:
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        if device.type == 'cpu':
-            print(colored('警告：gpu不可用，正在使用cpu运算！！！', 'red'))
-
-    # -----------------------------预训练权重导入--------------------------
-    if pretrained:
-        # 如果导入预训练权重
-        if backbone_pretrained:
-            # 仅加载主干网络预训练权重
-            if not os.path.exists(backbone_weight_path):
-                raise ValueError('主干网络预训练权重文件不存在，请检查')
-
-            model = SegFormer(num_classes=num_classes, phi=backbone, pretrained=backbone_pretrained,
-                              backbone_weight_path=backbone_weight_path)
+        if cuda_mode == 'ddp':
+            mp.spawn(train,
+                     nprocs=torch.cuda.device_count(),
+                     join=True)
         else:
-            if not os.path.exists(model_weight_path):
-                raise ValueError('模型预训练权重不存在,请检查')
+            train(0)
 
-            # 加载全局预训练权重
-            model = SegFormer(num_classes=num_classes, phi=backbone, pretrained=backbone_pretrained)
+
+def train(rank):
+    config = ConfigReader()
+
+    # ----------------------初始化全局随机数种子-------------------
+    random_seed_init(config.get_random_seed())
+
+    # ---------------------是否启用类别偏置权重来解决数据集不平衡问题----------------------
+    num_classes = config.get_num_classes()
+    if config.cls_weight_enable():
+        cls_weight = np.array(config.get_cls_weight(), dtype=np.float32)
+    else:
+        cls_weight = np.ones(num_classes, dtype=np.float32)
+
+    # --------------------cuda配置----------------------------
+    if not config.cuda_enable():
+        # cpu模式
+        device = torch.device('cpu')
+
+    else:
+        # gpu模式
+        cuda_mode = config.get_cuda_mode()
+
+        if cuda_mode == 'none':
+            device = torch.device('cuda')
+        elif cuda_mode == 'dp':
+            # dp模式
+            device = torch.device(f'cuda:{config.get_cuda_master_gpu()}')
+        else:
+            # ddp模式
+            plat = platform.system()
+            backend = 'gloo' if plat == 'Windows' else 'nccl'
+            world_size = torch.cuda.device_count()
+            addr = "localhost"
+            port = 23456
+            dist.init_process_group(backend=backend, world_size=world_size,
+                                    rank=rank, init_method=f"tcp://{addr}:{port}?use_libuv=0")
+            device = torch.device('cuda', rank)
+
+            if rank == 0:
+                print(Fore.BLUE + f"[{os.getpid()}] (rank = {rank}) 训练中...." + Style.RESET_ALL)
+                print(Fore.BLUE + f"Gpu Device Count : {world_size}" + Style.RESET_ALL)
+
+    # ------------------------------模型初始化（预训练权重加载）---------------------------
+    num_classes = config.get_num_classes()
+    phi = config.get_phi()
+    if not config.pretrained_enable():
+        if rank == 0:
+            print(Fore.GREEN + '不使用预训练权重' + Style.RESET_ALL)
+        # 不使用预训练权重
+        model = SegFormer(num_classes=num_classes, phi=phi, pretrained=False, backbone_weight_path='')
+    else:
+        weight_mode, weight_path = config.get_pretrained_param()
+
+        if weight_mode == 'backbone':
+            if rank == 0:
+                print(Fore.GREEN + f'主干网络将加载预训练权重, path: {weight_path}' + Style.RESET_ALL)
+            # 主干网络使用预训练权重
+            model = SegFormer(num_classes=num_classes, phi=phi, pretrained=True, backbone_weight_path=weight_path)
+        else:
+            # 全局使用预训练权重
+            model = SegFormer(num_classes=num_classes, phi=phi, pretrained=False, backbone_weight_path='')
+
+            if rank == 0:
+                print(Fore.GREEN + f'全局网络将加载预训练权重, path: {weight_path}' + Style.RESET_ALL)
+
             model_dict = model.state_dict()
-            load_key, no_load_key, temp_dict = pretrained_weight_load(model_dict=model_dict,
-                                                                      weight_path=model_weight_path, device=device)
-
+            pretrained_dict = torch.load(weight_path, map_location=device, weights_only=True)
+            load_key, no_load_key, temp_dict = [], [], {}
+            for k, v in pretrained_dict.items():
+                if k in model_dict.keys() and np.shape(model_dict[k]) == np.shape(v):
+                    temp_dict[k] = v
+                    load_key.append(k)
+                else:
+                    no_load_key.append(k)
             model_dict.update(temp_dict)
             model.load_state_dict(model_dict)
 
-            print('-'*16)
-            print('加载模型预训练权重中，如果有head加载失败是正常现象')
-            print('-'*16)
-            print(colored(f"成功加载权值key：{load_key[:500]}", "green"))
-            print(colored(f"成功加载key的数量为：{len(load_key)}", "green"))
-            print(colored(f"加载失败权值key：{no_load_key[:500]}", "yellow"))
-            print(colored(f"加载失败key的数量为：{len(no_load_key)}", "yellow"))
+            # 显示没有加载成功的权重
+            if rank == 0:
+                print(Fore.GREEN + f'加载成功的权重为: {str(load_key)[:500]}')
+                print(f'加载成功的权重数量为: {len(load_key)}' + Style.RESET_ALL)
+                print(Fore.YELLOW + f'加载失败的权重为: {str(no_load_key)[:500]}')
+                print(f'加载失败的权重数量为: {len(no_load_key)}' + Style.RESET_ALL)
+                print(Fore.BLUE + f'head有权重加载失败是正常的' + Style.RESET_ALL)
 
-    else:
-        # 如果不导入预训练权重
-        model = SegFormer(num_classes=num_classes, phi=backbone, pretrained=False)
-
-    # --------------------------启用混合精度--------------------------
-    if fp16:
+    # ------------------------------------- 是否启用fp16---------------------------------
+    if config.get_fp16():
         scaler = GradScaler()
     else:
         scaler = None
 
-    model_train = torch.nn.DataParallel(model.train())
-    cudnn.benchmark = True
-    model_train = model_train.to(device)
+    # -----------------------------启用Sync_BatchNorm（将提高训练的一致性）----------------------
+    model_train = model.train()
+    if torch.cuda.device_count() > 1 and config.get_cuda_mode() == 'ddp':
+        model_train = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model_train)
+    else:
+        print(Fore.YELLOW + 'Sync_Batchnorm没有启用，可能是由于单卡训练或非DDP模式' + Style.RESET_ALL)
 
-    # 如果是冻结训练，冻结主干网络
+    # ----------------------------分布式训练时将模型切分------------------------------------
+    if config.get_cuda_mode() == 'dp':
+        model_train = torch.nn.DataParallel(model_train)
+        cudnn.benchmark = True
+        model_train.cuda()
+    elif config.get_cuda_mode() == 'ddp':
+        model_train = model_train.cuda(rank)
+        model_train = DDP(model_train, device_ids=[rank], find_unused_parameters=True)
+
+    # --------------------------------读取数据集----------------------------------------
+    dataset_path = config.get_dataset_path()
+    if rank == 0:
+        print(Fore.BLUE + f'加载训练数据集: {dataset_path}' + Style.RESET_ALL)
+    with open(os.path.join(dataset_path, "ImageSets\\Segmentation\\train.txt"), 'r', encoding='utf-8') as f:
+        train_lines = f.readlines()
+        train_lines = [line.strip() for line in train_lines]
+    with open(os.path.join(dataset_path, "ImageSets\\Segmentation\\val.txt"), 'r', encoding='utf-8') as f:
+        val_lines = f.readlines()
+        val_lines = [line.strip() for line in val_lines]
+    num_train = len(train_lines)
+    num_val = len(val_lines)
+
+    if rank == 0:
+        print(Fore.BLUE + '加载数据集成功' + Style.RESET_ALL, flush=True)
+
+    optimizer_type, momentum, weight_decay = config.get_optimizer_param()
+    Init_lr = config.get_init_lr()
+    Min_lr = config.get_min_lr()
+    # --------------------------------freeze_train配置------------------------
+    init_epoch, freeze_epoch, freeze_batch_size, unfreeze_epoch, unfreeze_batch_size = config.get_epoch_param()
+    unfreeze_flag = False
+    freeze_train = config.freeze_train_enable()
     if freeze_train:
         for param in model.backbone.parameters():
             param.requires_grad = False
 
-    # 如果是冻结训练，则batch_size设置为freeze_batch_size,否则使用非冻结训练batch_size
-    batch_size = freeze_batch_size if freeze_train else unfreeze_batch_size
+    batch_size = freeze_batch_size if config.freeze_train_enable() else unfreeze_batch_size
 
-    # 根据当前batch_size，自适应调整学习率
-    optimizer_type = {'adam': EnumOptimizer.ADAM,
-                      'adamw': EnumOptimizer.ADAMW,
-                      'sgd': EnumOptimizer.SGD}[optimizer_type]
-    init_lr_fit, min_lr_fit = calculate_lf_fit(nbs=16, optimizer_type=optimizer_type, batch_size=batch_size,
-                                               init_lr=init_lr, min_lr=min_lr)
+    # --------------------------------通过当前的batch_size计算学习率--------------------------------
+    nbs = 16
+    lr_limit_max = 1e-4 if optimizer_type in ['adam', 'adamw'] else 5e-2
+    lr_limit_min = 3e-5 if optimizer_type in ['adam', 'adamw'] else 5e-4
+    Init_lr_fit = min(max(batch_size / nbs * Init_lr, lr_limit_min), lr_limit_max)
+    Min_lr_fit = min(max(batch_size / nbs * Min_lr, lr_limit_min * 1e-2), lr_limit_max * 1e-2)
 
-    # 选择优化器
-    optimizer = optimizer_select(optimizer_type=optimizer_type, model=model, init_lr_fit=init_lr_fit, momentum=momentum,
-                                 weight_decay=weight_decay)
+    # ------------------------------- 初始化优化器--------------------------------------------
+    optimizer = {
+        'adam': optim.Adam(model.parameters(), Init_lr_fit, betas=(momentum, 0.999), weight_decay=weight_decay),
+        'adamw': optim.AdamW(model.parameters(), Init_lr_fit, betas=(momentum, 0.999), weight_decay=weight_decay),
+        'sgd': optim.SGD(model.parameters(), Init_lr_fit, momentum=momentum, nesterov=True, weight_decay=weight_decay)
+    }[optimizer_type]
 
-    # 获得学习率下降公式
-    lr_scheduler_func = get_lr_scheduler(lr_decay_type, init_lr_fit, min_lr_fit, unfreeze_epoch)
+    # -------------------------------------获取学习率下降公式-------------------------------------
+    lr_decay_type = config.get_lr_decay_type()
+    lr_scheduler_func = get_lr_scheduler(lr_decay_type, Init_lr_fit, Min_lr_fit, unfreeze_epoch)
 
-    # 计算每一个epoch长度
+    # -------------------------------------计算每一个世代的长度-------------------------------------
     epoch_step = num_train // batch_size
     epoch_step_val = num_val // batch_size
 
     if epoch_step == 0 or epoch_step_val == 0:
-        raise ValueError('数据集小于batch_size，请扩充数据集')
+        raise ValueError("数据集过小，无法继续进行训练，请扩充数据集!!!")
 
+    # -----------------------------------------加载数据集-----------------------------------------------
+    input_shape = config.get_input_size()
+    num_classes = config.get_num_classes()
     train_dataset = SegmentationDataset(train_lines, input_shape, num_classes, True, dataset_path)
     val_dataset = SegmentationDataset(val_lines, input_shape, num_classes, False, dataset_path)
 
-    gen = DataLoader(train_dataset, shuffle=True, batch_size=batch_size, num_workers=num_workers, pin_memory=True,
-                     drop_last=True, collate_fn=seg_dataset_collate, sampler=None,
-                     worker_init_fn=partial(worker_init_fn, rank=0, seed=seed))
-    gen_val = DataLoader(val_dataset, shuffle=True, batch_size=batch_size, num_workers=num_workers, pin_memory=True,
-                         drop_last=True, collate_fn=seg_dataset_collate, sampler=None,
-                         worker_init_fn=partial(worker_init_fn, rank=0, seed=seed))
+    if config.get_cuda_mode() == 'ddp':
+        train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset, shuffle=True, )
+        val_sampler = torch.utils.data.distributed.DistributedSampler(val_dataset, shuffle=False, )
+        batch_size = batch_size // torch.cuda.device_count()
+        shuffle = False
+    else:
+        train_sampler = None
+        val_sampler = None
+        shuffle = True
 
-    unfreeze_flag = False  # 标志：防止从冻结epoch到解冻epoch后batch_size被多次设置
+    num_workers = config.get_num_workers() * torch.cuda.device_count()
+    seed = config.get_random_seed()
+    gen = DataLoader(train_dataset, shuffle=shuffle, batch_size=batch_size, num_workers=num_workers, pin_memory=True,
+                     drop_last=True, collate_fn=seg_dataset_collate, sampler=train_sampler,
+                     worker_init_fn=partial(worker_init_fn, rank=rank, seed=seed))
+    gen_val = DataLoader(val_dataset, shuffle=shuffle, batch_size=batch_size, num_workers=num_workers, pin_memory=True,
+                         drop_last=True, collate_fn=seg_dataset_collate, sampler=val_sampler,
+                         worker_init_fn=partial(worker_init_fn, rank=rank, seed=seed))
+
     for epoch in range(init_epoch, unfreeze_epoch):
-
+        # 当进入解冻阶段，重新设置参数
         if epoch >= freeze_epoch and not unfreeze_flag and freeze_train:
-            # 如果是冻结学习，并且到了解冻阶段，则解冻模型
-            print('到达指定周期，将解冻模型')
-
-            unfreeze_flag = True
-
-            # 赋值新的batch_size
             batch_size = unfreeze_batch_size
 
-            # 计算每一个epoch应该计算的数据
+            nbs = 16
+            lr_limit_max = 1e-4 if optimizer_type in ['adam', 'adamw'] else 5e-2
+            lr_limit_min = 3e-5 if optimizer_type in ['adam', 'adamw'] else 5e-4
+            Init_lr_fit = min(max(batch_size / nbs * Init_lr, lr_limit_min), lr_limit_max)
+            Min_lr_fit = min(max(batch_size / nbs * Min_lr, lr_limit_min * 1e-2), lr_limit_max * 1e-2)
+
+            lr_scheduler_func = get_lr_scheduler(lr_decay_type, Init_lr_fit, Min_lr_fit, unfreeze_epoch)
+
+            for param in model.backbone.parameters():
+                param.requires_grad = True
+
             epoch_step = num_train // batch_size
             epoch_step_val = num_val // batch_size
 
             if epoch_step == 0 or epoch_step_val == 0:
                 raise ValueError("数据集过小，无法继续进行训练，请扩充数据集。")
 
-            # 由于batch_size在冻结阶段和解冻阶段是不一致的，所以需要再一次计算学习率
-            init_lr_fit, min_lr_fit = calculate_lf_fit(nbs=16, optimizer_type=optimizer_type, batch_size=batch_size,
-                                                       init_lr=init_lr, min_lr=min_lr)
+            if config.get_cuda_mode() == 'ddp':
+                batch_size = batch_size // torch.cuda.device_count()
 
-            lr_scheduler_func = get_lr_scheduler(lr_decay_type, init_lr_fit, min_lr_fit, unfreeze_epoch)
-
-            # 解冻模型
-            for param in model.backbone.parameters():
-                param.requires_grad = True
-
-            gen = DataLoader(train_dataset, shuffle=True, batch_size=batch_size, num_workers=num_workers,
+            gen = DataLoader(train_dataset, shuffle=shuffle, batch_size=batch_size, num_workers=num_workers,
                              pin_memory=True,
-                             drop_last=True, collate_fn=seg_dataset_collate, sampler=None,
-                             worker_init_fn=partial(worker_init_fn, rank=0, seed=seed))
-            gen_val = DataLoader(val_dataset, shuffle=True, batch_size=batch_size, num_workers=num_workers,
+                             drop_last=True, collate_fn=seg_dataset_collate, sampler=train_sampler,
+                             worker_init_fn=partial(worker_init_fn, rank=rank, seed=seed))
+            gen_val = DataLoader(val_dataset, shuffle=shuffle, batch_size=batch_size, num_workers=num_workers,
                                  pin_memory=True,
-                                 drop_last=True, collate_fn=seg_dataset_collate, sampler=None,
-                                 worker_init_fn=partial(worker_init_fn, rank=0, seed=seed))
+                                 drop_last=True, collate_fn=seg_dataset_collate, sampler=val_sampler,
+                                 worker_init_fn=partial(worker_init_fn, rank=rank, seed=seed))
+
+            unfreeze_flag = True
+
+        if config.get_cuda_mode() == 'ddp':
+            train_sampler.set_epoch(epoch)
 
         set_optimizer_lr(optimizer, lr_scheduler_func, epoch)
-        fit_one_epoch(model_train=model_train, model=model, optimizer=optimizer, num_classes=num_classes,
-                      cur_epoch=epoch, epoch_step=epoch_step, epoch_step_val=epoch_step_val, gen=gen,
-                      gen_val=gen_val, total_epoch=unfreeze_epoch, cuda_enable=cuda_enable,
-                      focal_loss_flag=focal_loss, dice_loss_flag=dice_loss, cls_weights=cls_weights,
-                      fp16=fp16, scaler=scaler, val_epoch=val_epoch, model_save_path=model_save_path)
+
+        fit_one_epoch(rank=rank,model_train=model_train,model=model,num_classes=num_classes,cur_epoch=epoch,
+                      epoch_step=epoch_step, epoch_step_val=epoch_step_val,gen=gen,gen_val=gen_val,
+                      total_epoch=unfreeze_epoch,cls_weights=cls_weight,cuda_enable=config.cuda_enable,
+                      optimizer=optimizer,fp16_enable=config.get_fp16(),focal_loss_enable=False,dice_loss_enable=False,
+                      scaler=scaler,eval_freq=5)
+
+        if config.get_cuda_mode() == 'ddp':
+            dist.barrier()
+

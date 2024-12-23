@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from .backbone import mit_b0, mit_b1, mit_b2, mit_b3, mit_b4, mit_b5
+from model.backbone import mit_b0, mit_b1, mit_b2, mit_b3, mit_b4, mit_b5
 
 
 class MLP(nn.Module):
@@ -11,7 +11,7 @@ class MLP(nn.Module):
         self.proj = nn.Linear(input_dim, embed_dim)
 
     def forward(self, x): # x (b, c, h, w)
-        x = x.flatten(2).transpose(1, 2) # x (b, n, c)
+        x = x.flatten(2).transpose(1, 2).contiguous() # x (b, n, c)
         x = self.proj(x) # x (b, n, embed)
         return x
 
@@ -50,17 +50,17 @@ class Decoder(nn.Module):
         n, _, h, w = c4.shape
 
         # (b, c, 32, 32) -> (b, 1024, embed) -> (b, embed, 1024) -> (b, embed, 32, 32)
-        _c4 = self.linear_c4(c4).permute(0, 2, 1).reshape(n, -1, c4.shape[2], c4.shape[3])
+        _c4 = self.linear_c4(c4).permute(0, 2, 1).contiguous().reshape(n, -1, c4.shape[2], c4.shape[3])
         # (b, embed, 32, 32) -> (b, embed, 128, 128)
         _c4 = F.interpolate(_c4, size=c1.size()[2:], mode='bilinear', align_corners=False)
 
-        _c3 = self.linear_c3(c3).permute(0, 2, 1).reshape(n, -1, c3.shape[2], c3.shape[3])
+        _c3 = self.linear_c3(c3).permute(0, 2, 1).contiguous().reshape(n, -1, c3.shape[2], c3.shape[3])
         _c3 = F.interpolate(_c3, size=c1.size()[2:], mode='bilinear', align_corners=False)
 
-        _c2 = self.linear_c2(c2).permute(0, 2, 1).reshape(n, -1, c2.shape[2], c2.shape[3])
+        _c2 = self.linear_c2(c2).permute(0, 2, 1).contiguous().reshape(n, -1, c2.shape[2], c2.shape[3])
         _c2 = F.interpolate(_c2, size=c1.size()[2:], mode='bilinear', align_corners=False)
 
-        _c1 = self.linear_c1(c1).permute(0, 2, 1).reshape(n, -1, c1.shape[2], c1.shape[3])
+        _c1 = self.linear_c1(c1).permute(0, 2, 1).contiguous().reshape(n, -1, c1.shape[2], c1.shape[3])
 
         _c = self.linear_fuse(torch.cat([_c4, _c3, _c2, _c1], dim=1))
 

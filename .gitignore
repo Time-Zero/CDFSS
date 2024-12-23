@@ -1,5 +1,1 @@
-.idea
-/data/train_data/*
-!/data/train_data/README.md
-/data/weights/*
-!/data/weights/README.md
+/back
