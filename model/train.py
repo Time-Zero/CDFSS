@@ -152,7 +152,7 @@ def train(rank):
         model_train.cuda()
     elif config.get_cuda_mode() == 'ddp':
         model_train = model_train.cuda(rank)
-        model_train = DDP(model_train, device_ids=[rank], find_unused_parameters=True)
+        model_train = DDP(model_train, device_ids=[rank])
 
     # --------------------------------读取数据集----------------------------------------
     dataset_path = config.get_dataset_path()
@@ -233,6 +233,7 @@ def train(rank):
                          drop_last=True, collate_fn=seg_dataset_collate, sampler=val_sampler,
                          worker_init_fn=partial(worker_init_fn, rank=rank, seed=seed))
 
+    weight_save_freq, weight_save_path = config.get_weight_save_param()
     dist.barrier()
     for epoch in range(init_epoch, unfreeze_epoch):
         # 当进入解冻阶段，重新设置参数
@@ -280,7 +281,7 @@ def train(rank):
                       total_epoch=unfreeze_epoch,cls_weights=cls_weight,cuda_enable=config.cuda_enable,
                       optimizer=optimizer,fp16_enable=config.get_fp16(),focal_loss_enable=config.focal_loss_enable(),
                       dice_loss_enable=config.dice_loss_enable(),scaler=scaler,eval_freq=config.eval_freq(),
-                      loss_history=loss_history,)
+                      loss_history=loss_history,weight_save_freq=weight_save_freq, weight_save_path=weight_save_path)
 
         if config.get_cuda_mode() == 'ddp':
             dist.barrier()

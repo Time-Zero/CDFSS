@@ -33,3 +33,4 @@ if __name__ == '__main__':
     print(config.dice_loss_enable())
     print(config.eval_freq())
     print(config.get_log_dir())
+    print(config.get_weight_save_param())

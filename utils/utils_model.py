@@ -1,4 +1,5 @@
 import math
+import os.path
 import random
 import sys
 import time
@@ -338,12 +339,13 @@ def get_lr(optimizer):
 
 def fit_one_epoch(rank, model_train, model, num_classes, cur_epoch, epoch_step, epoch_step_val, gen, gen_val,
                   total_epoch, cls_weights, cuda_enable, optimizer, fp16_enable, focal_loss_enable, dice_loss_enable,
-                  scaler, eval_freq, loss_history):
+                  scaler, eval_freq, loss_history, weight_save_freq, weight_save_path):
     total_loss = 0.0
     total_f_score = 0.0
 
     val_loss = 0.0
     val_f_score = 0.0
+
 
     if rank == 0:
         print(Fore.BLUE + '*' * 16 + '开始训练' + '*' * 16 + Style.RESET_ALL, flush=True)
@@ -419,8 +421,7 @@ def fit_one_epoch(rank, model_train, model, num_classes, cur_epoch, epoch_step, 
     if rank == 0:
         pbar.close()
         print(Fore.BLUE + '*' * 16 + '结束训练' + '*' * 16 + Style.RESET_ALL, flush=True)
-
-        loss_history.append_loss(cur_epoch + 1, total_loss / epoch_step)
+        loss_history.append_loss(cur_epoch + 1, total_loss / epoch_step, total_f_score / epoch_step)
 
     # ---------------------------------- 评估 --------------------------------------
     if cur_epoch != 0 and cur_epoch % eval_freq == 0:
@@ -468,12 +469,16 @@ def fit_one_epoch(rank, model_train, model, num_classes, cur_epoch, epoch_step, 
         if rank == 0:
             pbar.close()
             print(Fore.BLUE + '*' * 16 + '结束评估' + '*' * 16 + Style.RESET_ALL, flush=True)
-
-            loss_history.append_loss(cur_epoch + 1, val_loss / epoch_step_val)
+            loss_history.append_val_loss(cur_epoch + 1, val_loss / epoch_step_val)
 
     if rank == 0:
         print(Fore.BLUE + f'Epoch: {cur_epoch + 1} / {total_epoch}' + Style.RESET_ALL, flush=True)
-        print(f'Total Loss: {total_loss / epoch_step:.3f}', flush=True)
+        print(f'Total Loss: {total_loss / epoch_step:.3f}, Total f_score: {total_f_score / epoch_step: .3f}', flush=True)
         if cur_epoch != 0 and cur_epoch % eval_freq == 0:
-            print(f'Val Loss: {val_loss / epoch_step_val:.3f}', flush=True)
-        # time.sleep(0.5)
+            print(f'Val Loss: {val_loss / epoch_step_val:.3f}, Val f_score: {val_f_score / epoch_step_val:.3f}', flush=True)
+
+        # --------------------------------------保存权重---------------------------------
+        if (cur_epoch % weight_save_freq == 0 and cur_epoch != 0) or cur_epoch + 1 == total_epoch:
+            torch.save(model.state_dict(),
+                       os.path.join(weight_save_path,f'ep{cur_epoch + 1:03d}-loss{total_loss/epoch_step:.3f}'
+                                                     f'-f_score{total_f_score/epoch_step:.3f}.pth'))

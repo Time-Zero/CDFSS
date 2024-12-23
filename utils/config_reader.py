@@ -73,6 +73,11 @@ class ConfigReader:
         self.__weight_decay = self.data['train']['optimizer_param']['weight_decay']
         self.__lr_decay_type = self.data['train']['lr_param']['lr_decay_type']
         self.__log_dir = self.data['train']['log_dir']
+        self.__weight_save_freq = self.data['train']["weight_save_param"]['weight_save_freq']
+        self.__weight_save_path = self.data['train']["weight_save_param"]['weight_save_path']
+
+    def get_weight_save_param(self):
+        return self.__weight_save_freq, self.__weight_save_path
 
     def get_log_dir(self):
         return self.__log_dir

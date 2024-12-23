@@ -14,6 +14,7 @@ class LossHistory:
         self.log_dir = log_dir
         self.losses = []
         self.val_loss = []
+        self.f_scores = []
 
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
@@ -27,23 +28,48 @@ class LossHistory:
             print(Fore.RED + "LossHistory模块生成模型结构失败" + Style.RESET_ALL)
             pass
 
-    def append_loss(self, epoch, loss):
+    def append_loss(self, epoch, loss, f_score):
+        """
+        记录loss同时记录f_score
+        :param epoch:
+        :param loss:
+        :param f_score:
+        :return:
+        """
         self.losses.append(loss)
-        with open(os.path.join(self.log_dir, 'loss.txt'), 'w', encoding='utf-8') as f:
+        self.f_scores.append(f_score)
+
+        with open(os.path.join(self.log_dir, 'loss.txt'), 'a', encoding='utf-8') as f:
             f.write(str(loss))
+            f.write('\n')
+        with open(os.path.join(self.log_dir, 'f_score.txt'), 'a', encoding='utf-8') as f:
+            f.write(str(f_score))
             f.write('\n')
 
         self.writer.add_scalar('loss', loss, epoch)
+        self.writer.add_scalar('f_score', f_score, epoch)
+        self.loss_plot()
 
     def append_val_loss(self, epoch, val_loss):
+        """
+        添加val_loss
+        :param epoch:
+        :param val_loss:
+        :return:
+        """
         self.val_loss.append(val_loss)
-        with open(os.path.join(self.log_dir, 'val_loss.txt'), 'w', encoding='utf-8') as f:
+        with open(os.path.join(self.log_dir, 'val_loss.txt'), 'a', encoding='utf-8') as f:
             f.write(str(val_loss))
             f.write('\n')
 
         self.writer.add_scalar('val_loss', val_loss, epoch)
+        self.val_loss_plot()
 
     def val_loss_plot(self):
+        """
+        绘制val_loss图像
+        :return:
+        """
         iters = range(len(self.val_loss))
 
         plt.figure()
@@ -71,10 +97,15 @@ class LossHistory:
         plt.close('all')
 
     def loss_plot(self):
+        """
+        绘制loss和f_score图像
+        :return:
+        """
         iters = range(len(self.losses))
 
         plt.figure()
         plt.plot(iters, self.losses, 'red', linewidth=2, label='train loss')
+        plt.plot(iters, self.f_scores, 'blue', linewidth=2, label='f-score')
 
         try:
             if len(self.losses) < 25:
@@ -84,6 +115,8 @@ class LossHistory:
 
             plt.plot(iters, scipy.signal.savgol_filter(self.losses, num, 3), 'green', linestyle='--', linewidth=2,
                      label='smooth train loss')
+            plt.plot(iters, scipy.signal.savgol_filter(self.f_scores, num, 3), 'blue', linestyle='--', linewidth=2,
+                     label='smooth f-score')
         except:
             pass
 
