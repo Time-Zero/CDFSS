@@ -34,3 +34,7 @@ if __name__ == '__main__':
     print(config.eval_freq())
     print(config.get_log_dir())
     print(config.get_weight_save_param())
+    print(config.get_pred_res_save_path())
+    print(config.get_model_path())
+    print(config.pred_cuda_enable())
+    print(config.get_name_classes())

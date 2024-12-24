@@ -152,7 +152,7 @@ def train(rank):
         model_train.cuda()
     elif config.get_cuda_mode() == 'ddp':
         model_train = model_train.cuda(rank)
-        model_train = DDP(model_train, device_ids=[rank])
+        model_train = DDP(model_train, device_ids=[rank],find_unused_parameters=True)
 
     # --------------------------------读取数据集----------------------------------------
     dataset_path = config.get_dataset_path()

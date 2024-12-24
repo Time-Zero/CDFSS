@@ -32,7 +32,7 @@ def dataset_divide(dataset_path: str, divide_per: list) -> None:
 
     # 读取文件列表
     label_file_list = os.listdir(label_path)
-    pbar = tqdm(total=len(label_file_list), position=0, leave=True, unit='image')
+    pbar = tqdm(total=len(label_file_list), position=0, leave=True, unit='images')
 
     res = []
     for label_file_name in label_file_list:

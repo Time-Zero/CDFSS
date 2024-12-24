@@ -2,7 +2,7 @@ from utils.utils_dataset import *
 
 def test_dataset_divide():
     dataset_path = "E:\毕设\Cross_Domain_Few_Shot_Segmentation_System\data\dataset\FloodNet_Voc_Format"
-    dataset_divide(dataset_path, 0.7, 0.15, 0.15)
+    dataset_divide(dataset_path, [0.7, 0.15, 0.15])
 
 def test_image_crop():
     dataset_path = "E:\毕设\Cross_Domain_Few_Shot_Segmentation_System\data\dataset\FloodNet_Voc_Format"
@@ -14,6 +14,6 @@ def test_image_crop():
     label.show()
 
 if __name__ == '__main__':
-    # test_dataset_divide()
-    # test_image_crop()
+    test_dataset_divide()
+    test_image_crop()
     pass

@@ -37,7 +37,7 @@
         ],
         //    全局灰度图片颜色设置
         "color": {
-            "need_color": false,
+            "need_color": true,
             //      是否对灰度图片进行自动色彩映射
             "auto_color": true,
             //      不同类的灰度映射到的颜色（如果不采用自动色彩映射）
@@ -141,5 +141,10 @@
             "weight_save_freq": 1,
             "weight_save_path": "E:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\results\\saved_weight"
         },
+    },
+    "pred": {
+        "cuda": true,
+        "save_path": "E:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\results\\predict_out",
+        "model_path": "E:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\results\\saved_weight\\ep090-loss0.305-f_score0.815.pth"
     }
 }

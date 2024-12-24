@@ -42,6 +42,7 @@ class ConfigReader:
         self.__num_classes = self.data['dataset']['num_classes']
         self.__cls_weight_enable = self.data['dataset']['cls_weight']['enable']
         self.__cls_weight = self.data['dataset']['cls_weight']['cls_weight']
+        self.__name_classes = self.data['dataset']['name_classes']
 
         # ----------------------------模型参数-------------------------------------
         self.__num_workers = self.data['model']['num_workers']
@@ -75,6 +76,23 @@ class ConfigReader:
         self.__log_dir = self.data['train']['log_dir']
         self.__weight_save_freq = self.data['train']["weight_save_param"]['weight_save_freq']
         self.__weight_save_path = self.data['train']["weight_save_param"]['weight_save_path']
+
+        # ---------------------------------------预测----------------------------------
+        self.__pred_res_save_path = self.data['pred']['save_path']
+        self.__pred_model_path = self.data['pred']['model_path']
+        self.__pred_cuda = self.data['pred']['cuda']
+
+    def get_name_classes(self):
+        return self.__name_classes
+
+    def pred_cuda_enable(self):
+        return self.__pred_cuda
+
+    def get_model_path(self):
+        return self.__pred_model_path
+
+    def get_pred_res_save_path(self):
+        return self.__pred_res_save_path
 
     def get_weight_save_param(self):
         return self.__weight_save_freq, self.__weight_save_path
