@@ -13,8 +13,9 @@ class LossHistory:
     def __init__(self, log_dir, model, input_shape):
         self.log_dir = log_dir
         self.losses = []
-        self.val_loss = []
         self.f_scores = []
+        self.val_loss = []
+        self.val_f_scores = []
 
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
@@ -50,19 +51,27 @@ class LossHistory:
         self.writer.add_scalar('f_score', f_score, epoch)
         self.loss_plot()
 
-    def append_val_loss(self, epoch, val_loss):
+    def append_val_loss(self, epoch, val_loss, val_f_score):
         """
         添加val_loss
+        :param val_f_score:
         :param epoch:
         :param val_loss:
         :return:
         """
         self.val_loss.append(val_loss)
+        self.val_f_scores.append(val_f_score)
+
         with open(os.path.join(self.log_dir, 'val_loss.txt'), 'a', encoding='utf-8') as f:
             f.write(str(val_loss))
             f.write('\n')
 
+        with open(os.path.join(self.log_dir, 'val_f_score.txt'), 'a', encoding='utf-8') as f:
+            f.write(str(val_f_score))
+            f.write('\n')
+
         self.writer.add_scalar('val_loss', val_loss, epoch)
+        self.writer.add_scalar('val_f_score', val_f_score, epoch)
         self.val_loss_plot()
 
     def val_loss_plot(self):
@@ -73,7 +82,8 @@ class LossHistory:
         iters = range(len(self.val_loss))
 
         plt.figure()
-        plt.plot(iters, self.val_loss, 'coral', linewidth=2, label='val loss')
+        plt.plot(iters, self.val_loss, 'red', linewidth=2, label='val loss')
+        plt.plot(iters, self.val_f_scores, 'blue', linewidth=2, label='val f-score')
 
         try:
             if len(self.losses) < 25:
@@ -81,7 +91,9 @@ class LossHistory:
             else:
                 num = 15
 
-            plt.plot(iters, scipy.signal.savgol_filter(self.val_loss, num, 3), '#8B4513', linestyle='--', linewidth=2,
+            plt.plot(iters, scipy.signal.savgol_filter(self.val_loss, num, 3), 'green', linestyle='--', linewidth=2,
+                     label='smooth val loss')
+            plt.plot(iters, scipy.signal.savgol_filter(self.val_f_scores, num, 3), 'yellow', linestyle='--', linewidth=2,
                      label='smooth val loss')
         except:
             pass
@@ -92,7 +104,6 @@ class LossHistory:
         plt.legend(loc='upper right')
 
         plt.savefig(os.path.join(self.log_dir, 'epoch_val_loss.png'))
-
         plt.cla()
         plt.close('all')
 
@@ -115,7 +126,7 @@ class LossHistory:
 
             plt.plot(iters, scipy.signal.savgol_filter(self.losses, num, 3), 'green', linestyle='--', linewidth=2,
                      label='smooth train loss')
-            plt.plot(iters, scipy.signal.savgol_filter(self.f_scores, num, 3), 'blue', linestyle='--', linewidth=2,
+            plt.plot(iters, scipy.signal.savgol_filter(self.f_scores, num, 3), 'yellow', linestyle='--', linewidth=2,
                      label='smooth f-score')
         except:
             pass

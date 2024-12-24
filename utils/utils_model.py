@@ -16,19 +16,21 @@ from tqdm import tqdm
 
 from utils.utils_predict import f_score
 
+
 def resize_image(image, size):
-    iw, ih  = image.size
-    w, h    = size
+    iw, ih = image.size
+    w, h = size
 
-    scale   = min(w/iw, h/ih)
-    nw      = int(iw*scale)
-    nh      = int(ih*scale)
+    scale = min(w / iw, h / ih)
+    nw = int(iw * scale)
+    nh = int(ih * scale)
 
-    image   = image.resize((nw,nh), Image.BICUBIC)
-    new_image = Image.new('RGB', size, (128,128,128))
-    new_image.paste(image, ((w-nw)//2, (h-nh)//2))
+    image = image.resize((nw, nh), Image.BICUBIC)
+    new_image = Image.new('RGB', size, (128, 128, 128))
+    new_image.paste(image, ((w - nw) // 2, (h - nh) // 2))
 
     return new_image, nw, nh
+
 
 def convert_color(image):
     """
@@ -358,7 +360,6 @@ def fit_one_epoch(rank, model_train, model, num_classes, cur_epoch, epoch_step, 
     val_loss = 0.0
     val_f_score = 0.0
 
-
     if rank == 0:
         print(Fore.BLUE + '*' * 16 + '开始训练' + '*' * 16 + Style.RESET_ALL, flush=True)
         pbar = tqdm(total=epoch_step, desc=f'Epoch {cur_epoch + 1}/{total_epoch}', postfix=dict, mininterval=0.3,
@@ -481,16 +482,32 @@ def fit_one_epoch(rank, model_train, model, num_classes, cur_epoch, epoch_step, 
         if rank == 0:
             pbar.close()
             print(Fore.BLUE + '*' * 16 + '结束评估' + '*' * 16 + Style.RESET_ALL, flush=True)
-            loss_history.append_val_loss(cur_epoch + 1, val_loss / epoch_step_val)
+            loss_history.append_val_loss(cur_epoch + 1, val_loss / epoch_step_val, val_f_score / epoch_step_val)
 
     if rank == 0:
         print(Fore.BLUE + f'Epoch: {cur_epoch + 1} / {total_epoch}' + Style.RESET_ALL, flush=True)
-        print(f'Total Loss: {total_loss / epoch_step:.3f}, Total f_score: {total_f_score / epoch_step: .3f}', flush=True)
+        print(f'Total Loss: {total_loss / epoch_step:.3f}, Total f_score: {total_f_score / epoch_step: .3f}',
+              flush=True)
         if cur_epoch != 0 and cur_epoch % eval_freq == 0:
-            print(f'Val Loss: {val_loss / epoch_step_val:.3f}, Val f_score: {val_f_score / epoch_step_val:.3f}', flush=True)
+            print(f'Val Loss: {val_loss / epoch_step_val:.3f}, Val f_score: {val_f_score / epoch_step_val:.3f}',
+                  flush=True)
 
-        # --------------------------------------保存权重---------------------------------
+            # -------------------------------保存最好的权重文件------------------------
+            best_weight_save_path = os.path.join(weight_save_path, 'best_weight')
+            if not os.path.exists(best_weight_save_path):
+                os.makedirs(best_weight_save_path)
+
+            if len(loss_history.val_loss) <= 1 or (val_loss / epoch_step_val) <= min(loss_history.val_loss):
+                torch.save(model.state_dict(), os.path.join(best_weight_save_path, 'best_val_loss.pth'))
+
+            if (val_f_score / epoch_step_val) >= max(loss_history.val_f_scores):
+                torch.save(model.state_dict(), os.path.join(best_weight_save_path, 'best_val_f_score.pth'))
+
+        # --------------------------------------保存权重(每一周期都保存)---------------------------------
         if (cur_epoch % weight_save_freq == 0 and cur_epoch != 0) or cur_epoch + 1 == total_epoch:
+            epoch_save_path = os.path.join(weight_save_path, 'every_epoch')
+            if not os.path.exists(epoch_save_path):
+                os.makedirs(epoch_save_path)
             torch.save(model.state_dict(),
-                       os.path.join(weight_save_path,f'ep{cur_epoch + 1:03d}-loss{total_loss/epoch_step:.3f}'
-                                                     f'-f_score{total_f_score/epoch_step:.3f}.pth'))
+                       os.path.join(epoch_save_path, f'ep{cur_epoch + 1:03d}-loss{total_loss / epoch_step:.3f}'
+                                                     f'-f_score{total_f_score / epoch_step:.3f}.pth'))

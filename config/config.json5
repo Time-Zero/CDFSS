@@ -102,7 +102,7 @@
         //      种类多（十几类）时，如果batch_size比较大（10以上），那么设置为True
         //      种类多（十几类）时，如果batch_size比较小（10以下），那么设置为False
         "dice_loss": false,
-        "eval_freq": 5,
+        "eval_freq": 3,
         "log_dir": "E:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\logs",
         "pretrained": {
             //  是否启用预训练参数
@@ -125,7 +125,7 @@
         "freeze_train": {
             "enable": true,
             "init_epoch": 0,
-            "freeze_epoch": 50,
+            "freeze_epoch": 60,
             "freeze_batch_size": 16,
             "unfreeze_epoch": 100,
             "unfreeze_batch_size": 8
@@ -145,6 +145,6 @@
     "pred": {
         "cuda": true,
         "save_path": "E:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\results\\predict_out",
-        "model_path": "E:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\results\\saved_weight\\ep090-loss0.305-f_score0.815.pth"
+        "model_path": "E:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\results\\saved_weight\\every_epoch\\ep100-loss0.087-f_score0.778.pth"
     }
 }

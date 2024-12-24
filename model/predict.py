@@ -53,5 +53,3 @@ def predict():
 
     hist, IoUs, PA_Recall, Precision = compute_miou(label_path, pred_img_save_path, image_ids, num_classes)
     show_results(miou_save_path, hist, IoUs, PA_Recall, Precision, config.get_name_classes())
-
-
