@@ -77,16 +77,14 @@
         //  cuda有关参数
         "cuda_param": {
             //      是否启用cuda
-            "cuda": true,
+            "cuda": false,
             //        训练模式:
             //          none: 单机单卡
             //          dp(dataparalle): 单机多卡
             //          ddp(DistributedDataParallel): 单机多卡或多机多卡
             "mode": "ddp",
             //      启用的gpu
-            "visible_device": [0, 1],
-            //      dp模式下的主gpu，建议选择显存较大的
-            "master_gpu": 0,
+            "visible_device": [0,1]
         },
         //  模型规模
         "phi": 'b0',

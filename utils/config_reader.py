@@ -50,7 +50,7 @@ class ConfigReader:
         self.__cuda_enable = self.data['model']['cuda_param']['cuda']
         self.__cuda_mode = self.data['model']['cuda_param']['mode']
         self.__cuda_visible_device = self.data['model']['cuda_param']['visible_device']
-        self.__cuda_master_gpu = self.data['model']['cuda_param']['master_gpu']
+        # self.__cuda_master_gpu = self.data['model']['cuda_param']['master_gpu']
         self.__phi = self.data['model']['phi']
         self.__input_size = self.data['model']['input_size']
 
@@ -147,8 +147,10 @@ class ConfigReader:
     def pretrained_enable(self):
         return self.__pretrained
 
-    def get_cuda_master_gpu(self):
-        return self.__cuda_master_gpu
+    # def get_cuda_master_gpu(self):
+    #     assert self.__cuda_master_gpu in self.__cuda_visible_device, 'cuda_master_gpu不在cuda可见gpu中'
+    #
+    #     return self.__cuda_master_gpu
 
     def get_cuda_visible_gpus(self):
         # return ",".join(map(str, self.__cuda_visible_device))
