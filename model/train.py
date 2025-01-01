@@ -10,7 +10,7 @@ import torch.multiprocessing as mp
 from colorama import Fore, Style
 from torch import optim
 from torch.backends import cudnn
-from torch.cuda.amp import GradScaler
+from torch.amp import GradScaler
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader
 

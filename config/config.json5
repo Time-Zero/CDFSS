@@ -14,7 +14,7 @@
     //  数据集参数
     "dataset": {
         //    数据集位置
-        "path": "E:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\results\\processed_dataset",
+        "path": "D:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\data\\dataset\\processed_dataset",
         //    数据集中待划分种类（包含背景）
         "num_classes": 10,
         //    如果数据集不均衡，手动设置cls_weight
@@ -73,7 +73,7 @@
         //    单个gpu的工作线程数
         "num_workers": 4,
         //    启用fp16，这将减少内存占用，让部分无法训练的模型可以训练
-        "fp16": false,
+        "fp16": true,
         //  cuda有关参数
         "cuda_param": {
             //      是否启用cuda
@@ -101,7 +101,7 @@
         //      种类多（十几类）时，如果batch_size比较小（10以下），那么设置为False
         "dice_loss": false,
         "eval_freq": 3,
-        "log_dir": "E:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\logs",
+        "log_dir": "D:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\logs",
         "pretrained": {
             //  是否启用预训练参数
             "enable": true,
@@ -110,7 +110,7 @@
 //                   full: 加载全局网络
             "weight": "full",
             //  预训练参数路径
-            "weight_path": "E:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\data\\weights\\segformer_b0_weights_voc.pth"
+            "weight_path": "D:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\data\\weights\\segformer_b0_weights_voc.pth"
         },
         //  选择优化器类型：adamw,adam,sgd(不推荐)
         "optimizer_param": {
@@ -137,12 +137,12 @@
         },
         "weight_save_param": {
             "weight_save_freq": 1,
-            "weight_save_path": "E:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\results\\saved_weight"
+            "weight_save_path": "D:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\results\\saved_weight"
         },
     },
     "pred": {
         "cuda": true,
-        "save_path": "E:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\results\\predict_out",
-        "model_path": "E:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\results\\saved_weight\\every_epoch\\ep100-loss0.087-f_score0.778.pth"
+        "save_path": "D:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\results\\predict_out",
+        "model_path": "D:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\results\\saved_weight\\every_epoch\\ep100-loss0.087-f_score0.778.pth"
     }
 }

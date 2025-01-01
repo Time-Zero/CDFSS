@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from PIL import Image
 from colorama import Fore, Style
 from torch import nn
-from torch.cuda.amp import autocast
+from torch.amp import autocast
 from tqdm import tqdm
 
 from utils.utils_predict import f_score
@@ -402,7 +402,7 @@ def fit_one_epoch(rank, model_train, model, num_classes, cur_epoch, epoch_step, 
             optimizer.step()
 
         else:
-            with autocast:
+            with autocast(device_type='cuda' if cuda_enable else 'cpu'):
                 outputs = model_train(images)
 
                 # 计算损失
