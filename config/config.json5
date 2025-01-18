@@ -64,8 +64,6 @@
                 //        裁剪尺寸(w,h)（该尺寸需要比所有图片大，并且推荐和前面的input_size接近，防止细节丢失）
                 "size": [768, 768],
             },
-            //      是否为纯灰度图片添加色彩映射，使其成为伪彩色图片
-            "colored": true,
         },
     }
     ,
@@ -77,12 +75,12 @@
         //  cuda有关参数
         "cuda_param": {
             //      是否启用cuda
-            "cuda": false,
+            "cuda": true,
             //        训练模式:
             //          none: 单机单卡
             //          dp(dataparalle): 单机多卡
             //          ddp(DistributedDataParallel): 单机多卡或多机多卡
-            "mode": "ddp",
+            "mode": "none",
             //      启用的gpu
             "visible_device": [0,1]
         },
