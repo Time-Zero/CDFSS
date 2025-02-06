@@ -33,7 +33,7 @@ def preprocess_data():
             raise FileNotFoundError('数据集结果不符合Voc数据集格式')
 
         # 创建与处理过的数据集保存路径
-        save_path = os.path.join("../results", 'processed_dataset')
+        save_path = os.path.join("./results", 'processed_dataset')
         if not os.path.exists(save_path):
             os.makedirs(save_path)
         config.set_dataset_path(save_path)  # 只要经过处理，那么dataset_path就会改变
@@ -44,6 +44,11 @@ def preprocess_data():
 
         jpeg_save_path = os.path.join(save_path, 'JPEGImages')
         segmentation_save_path = os.path.join(save_path, 'SegmentationClass')
+        if os.path.exists(jpeg_save_path):
+            shutil.rmtree(jpeg_save_path)
+        if os.path.exists(segmentation_save_path):
+            shutil.rmtree(segmentation_save_path)
+
         if not os.path.exists(jpeg_save_path):
             os.makedirs(jpeg_save_path)
         if not os.path.exists(segmentation_save_path):

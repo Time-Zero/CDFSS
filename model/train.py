@@ -9,8 +9,8 @@ import torch.distributed as dist
 import torch.multiprocessing as mp
 from colorama import Fore, Style
 from torch import optim
-from torch.backends import cudnn
 from torch.amp import GradScaler
+from torch.backends import cudnn
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader
 
@@ -73,7 +73,7 @@ def train(rank: int = 0):
             device = torch.device('cuda')
         elif cuda_mode == 'dp':
             # dp模式
-            device = torch.device(f'cuda')
+            device = torch.device('cuda')
         else:
             # ddp模式
             plat = platform.system()
@@ -137,6 +137,8 @@ def train(rank: int = 0):
         time_str = datetime.datetime.strftime(datetime.datetime.now(), '%Y_%m_%d_%H_%M_%S')
         log_dir = os.path.join(config.get_log_dir(), "loss_" + str(time_str))
         loss_history = LossHistory(log_dir, model, config.get_input_size())
+        print(Fore.YELLOW +
+              f'TensorBoard日志路径为: {os.path.join(os.getcwd() , log_dir)}' + Style.RESET_ALL)
     else:
         loss_history = None
 
@@ -160,7 +162,7 @@ def train(rank: int = 0):
         if cuda_mode == 'none':
             model_train.cuda()
         elif cuda_mode == 'dp':
-            model_train = torch.nn.DataParallel(model_train, device_ids = devices_ids)
+            model_train = torch.nn.DataParallel(model_train, device_ids=devices_ids)
             cudnn.benchmark = True
             model_train.cuda()
         elif cuda_mode == 'ddp':

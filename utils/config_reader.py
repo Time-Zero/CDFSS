@@ -9,7 +9,7 @@ from utils.singleton import singleton
 class ConfigReader:
     def __init__(self):
         self.__dataset_path = None
-        self.file_path = "../config/config.json5"
+        self.file_path = "./config/config.json5"
         self.data = None
         self.dataset_path = None
 
@@ -25,10 +25,12 @@ class ConfigReader:
         try:
             self.data = json5.loads(config_content)
         except Exception as e:
-            print('配置文件解析失败，请检查配置文件语法: {e}')
+            print(f'配置文件解析失败，请检查配置文件语法: {e}')
 
         # ------------------------random_seed----------------------
         self.__random_seed = self.data['base']['random_seed']
+        self.__is_train = self.data['base']['process_param']['train']
+        self.__is_predict = self.data['base']['process_param']['predict']
 
         # --------------------------dataset参数---------------------------------------
         self.__dataset_path = self.data['dataset']['path']
@@ -82,6 +84,16 @@ class ConfigReader:
         self.__pred_model_path = self.data['pred']['model_path']
         self.__pred_cuda = self.data['pred']['cuda']
 
+    def set_conf_path(self, conf_path):
+        self.__dataset_path = conf_path
+        self.__read_config()
+
+    def is_train(self):
+        return self.__is_train
+
+    def is_predict(self):
+        return self.__is_predict
+
     def get_name_classes(self):
         return self.__name_classes
 
@@ -113,7 +125,7 @@ class ConfigReader:
         return self.__input_size
 
     def get_lr_decay_type(self):
-        if self.__lr_decay_type not in ['step','cos']:
+        if self.__lr_decay_type not in ['step', 'cos']:
             raise ValueError(f'你当前选择学习率下降方式不支持: {self.__lr_decay_type}')
         return self.__lr_decay_type
 
@@ -139,7 +151,7 @@ class ConfigReader:
         return self.__phi
 
     def get_pretrained_param(self):
-        if self.__pretrained_weight not in ['full','backbone']:
+        if self.__pretrained_weight not in ['full', 'backbone']:
             raise ValueError('pretrained weight 必须为 full 或 backbone')
 
         return self.__pretrained_weight, self.__pretrained_weight_path
@@ -157,7 +169,7 @@ class ConfigReader:
         return self.__cuda_visible_device
 
     def get_cuda_mode(self):
-        if self.__cuda_mode not in ['none','dp','ddp']:
+        if self.__cuda_mode not in ['none', 'dp', 'ddp']:
             raise ValueError('cuda模式设置错误，请检查配置文件')
         return self.__cuda_mode
 

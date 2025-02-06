@@ -1,29 +1,17 @@
 {
-    //  ---------------------------------------------基础全局参数----------------------------------------
-    "base": {
-        //    全局随机数种子
-        "random_seed": 0,
-        //    训练过程
-        "process_param": {
-            //      是否训练
-            "train": true,
-            //      是否预测
-            "predict": true
-        }
-    },
     //  数据集参数
-    "dataset": {
+    dataset: {
         //    数据集位置
-        "path": "D:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\data\\dataset\\processed_dataset",
+        path: ".\\data\\dataset\\processed_dataset",
         //    数据集中待划分种类（包含背景）
-        "num_classes": 10,
+        num_classes: 10,
         //    如果数据集不均衡，手动设置cls_weight
-        "cls_weight": {
-            "enable": false,
-            "cls_weight": [1, 1, 1, 1],
+        cls_weight: {
+            enable: false,
+            cls_weight: [1, 1, 1, 1],
         },
         //    不同灰度的含义（从0~。。。）
-        "name_classes": [
+        name_classes: [
             'Background',
             'Building-flooded',
             'Building-non-flooded',
@@ -36,12 +24,12 @@
             'Grass'
         ],
         //    全局灰度图片颜色设置
-        "color": {
-            "need_color": true,
+        color: {
+            need_color: true,
             //      是否对灰度图片进行自动色彩映射
-            "auto_color": true,
+            auto_color: true,
             //      不同类的灰度映射到的颜色（如果不采用自动色彩映射）
-            "colors_map": [
+            colors_map: [
                 [0, 0, 255],
                 [0, 255, 0],
                 [0, 255, 255],
@@ -49,98 +37,108 @@
             ]
         },
         //    预处理参数
-        "preprocess_param": {
+        preprocess_param: {
             //      划分参数
-            "divide": {
+            divide: {
                 //        是否需要划分数据集
-                "need_divide": false,
+                need_divide: false,
                 //        训练集占比
-                "divide_percent": [0.7,0.15,0.15],
+                divide_percent: [0.7,0.15,0.15],
             },
             //      裁剪参数（针对过大的图片）
-            "random_crop": {
+            random_crop: {
                 //        需要裁剪
-                "need_crop": true,
+                need_crop: true,
                 //        裁剪尺寸(w,h)（该尺寸需要比所有图片大，并且推荐和前面的input_size接近，防止细节丢失）
-                "size": [768, 768],
+                size: [768, 768],
             },
         },
-    }
-    ,
-    "model": {
+    },
+    base: {
+        //    全局随机数种子
+        random_seed: 0,
+        //    训练过程
+        process_param: {
+            //      是否训练
+            train: true,
+            //      是否预测
+            predict: true
+        }
+    },
+    model: {
         //    单个gpu的工作线程数
-        "num_workers": 4,
+        num_workers: 4,
         //    启用fp16，这将减少内存占用，让部分无法训练的模型可以训练
-        "fp16": true,
+        fp16: false,
         //  cuda有关参数
-        "cuda_param": {
+        cuda_param: {
             //      是否启用cuda
-            "cuda": true,
+            cuda: true,
             //        训练模式:
             //          none: 单机单卡
             //          dp(dataparalle): 单机多卡
             //          ddp(DistributedDataParallel): 单机多卡或多机多卡
-            "mode": "none",
+            mode: "none",
             //      启用的gpu
-            "visible_device": [0,1]
+            visible_device: [0,1]
         },
         //  模型规模
-        "phi": 'b0',
+        phi: 'b0',
         //    输入模型的大小(w,h)
-        "input_size": [768, 768],
+        input_size: [768, 768],
         //    预训练参数配置
     },
-    "train": {
+    train: {
         //  是否使用focal loss来防止正负样本不平衡
-        "focal_loss": false,
+        focal_loss: false,
         //  建议选项：
         //      种类少（几类）时，设置为True
         //      种类多（十几类）时，如果batch_size比较大（10以上），那么设置为True
         //      种类多（十几类）时，如果batch_size比较小（10以下），那么设置为False
-        "dice_loss": false,
-        "eval_freq": 3,
-        "log_dir": "D:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\logs",
-        "pretrained": {
+        dice_loss: false,
+        eval_freq: 3,
+        log_dir: ".\\logs",
+        pretrained: {
             //  是否启用预训练参数
-            "enable": true,
+            enable: true,
             //  预训练参数加载模式：
 //                   backbone: 只加载主干网络,
 //                   full: 加载全局网络
-            "weight": "full",
+            weight: "full",
             //  预训练参数路径
-            "weight_path": "D:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\data\\weights\\segformer_b0_weights_voc.pth"
+            weight_path: ".\\data\\weights\\segformer_b0_weights_voc.pth"
         },
         //  选择优化器类型：adamw,adam,sgd(不推荐)
-        "optimizer_param": {
-            "optimizer_type": "adamw",
+        optimizer_param: {
+            optimizer_type: "adamw",
             //  动量
-            "momentum": 0.9,
-            "weight_decay": 1e-2
+            momentum: 0.9,
+            weight_decay: 1e-2
         },
         // 冻结学习配置
-        "freeze_train": {
-            "enable": true,
-            "init_epoch": 0,
-            "freeze_epoch": 60,
-            "freeze_batch_size": 16,
-            "unfreeze_epoch": 100,
-            "unfreeze_batch_size": 8
+        freeze_train: {
+            enable: true,
+            init_epoch: 0,
+            freeze_epoch: 40,
+            freeze_batch_size: 4,
+            unfreeze_epoch: 80,
+            unfreeze_batch_size: 2
         },
         //  学习率参数
-        "lr_param": {
-            "init_lr": 1e-4,
-            "min_lr_ratio": 0.01,
+        lr_param: {
+            init_lr: 1e-4,
+            min_lr_ratio: 0.01,
             // 使用到的学习率下降方式，可选的有'step'、'cos'
-            "lr_decay_type": 'cos'
+            lr_decay_type: 'cos'
         },
-        "weight_save_param": {
-            "weight_save_freq": 1,
-            "weight_save_path": "D:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\results\\saved_weight"
+        weight_save_param: {
+            weight_save_freq: 1,
+            weight_save_path: ".\\results\\saved_weight"
         },
     },
-    "pred": {
-        "cuda": true,
-        "save_path": "D:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\results\\predict_out",
-        "model_path": "D:\\毕设\\Cross_Domain_Few_Shot_Segmentation_System\\results\\saved_weight\\every_epoch\\ep100-loss0.087-f_score0.778.pth"
+    pred: {
+        cuda: true,
+        save_path: ".\\results\\predict_out",
+        model_path: ".\\results\\saved_weight\\best_weight\\best_val_loss.pth"
     }
 }
