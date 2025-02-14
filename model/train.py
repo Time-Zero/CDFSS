@@ -138,7 +138,7 @@ def train(rank: int = 0):
         log_dir = os.path.join(config.get_log_dir(), "loss_" + str(time_str))
         loss_history = LossHistory(log_dir, model, config.get_input_size())
         print(Fore.YELLOW +
-              f'TensorBoard日志路径为: {os.path.join(os.getcwd() , log_dir)}' + Style.RESET_ALL)
+              f'TensorBoard日志路径为: {os.path.normpath(os.path.join(os.getcwd(), log_dir))}' + Style.RESET_ALL)
     else:
         loss_history = None
 
@@ -172,7 +172,7 @@ def train(rank: int = 0):
     # --------------------------------读取数据集----------------------------------------
     dataset_path = config.get_dataset_path()
     if rank == 0:
-        print(Fore.BLUE + f'加载训练数据集: {dataset_path}' + Style.RESET_ALL)
+        print(Fore.BLUE + f'加载训练数据集: {os.path.normpath(dataset_path)}' + Style.RESET_ALL)
     with open(os.path.join(dataset_path, "ImageSets\\Segmentation\\train.txt"), 'r', encoding='utf-8') as f:
         train_lines = f.readlines()
         train_lines = [line.strip() for line in train_lines]
@@ -189,10 +189,12 @@ def train(rank: int = 0):
     init_lr = config.get_init_lr()
     min_lr = config.get_min_lr()
     # --------------------------------freeze_train配置------------------------
+    is_save_weight = True
     init_epoch, freeze_epoch, freeze_batch_size, unfreeze_epoch, unfreeze_batch_size = config.get_epoch_param()
     unfreeze_flag = False
     freeze_train = config.freeze_train_enable()
     if freeze_train:
+        is_freeze_weight = False
         for param in model.backbone.parameters():
             param.requires_grad = False
 
@@ -257,6 +259,9 @@ def train(rank: int = 0):
     for epoch in range(init_epoch, unfreeze_epoch):
         # 当进入解冻阶段，重新设置参数
         if epoch >= freeze_epoch and not unfreeze_flag and freeze_train:
+            if not is_save_weight:
+                is_save_weight = True
+
             batch_size = unfreeze_batch_size
 
             nbs = 16
@@ -298,7 +303,8 @@ def train(rank: int = 0):
                       total_epoch=unfreeze_epoch, cls_weights=cls_weight, cuda_enable=cuda_enable,
                       optimizer=optimizer, fp16_enable=config.get_fp16(), focal_loss_enable=config.focal_loss_enable(),
                       dice_loss_enable=config.dice_loss_enable(), scaler=scaler, eval_freq=config.eval_freq(),
-                      loss_history=loss_history, weight_save_freq=weight_save_freq, weight_save_path=weight_save_path)
+                      loss_history=loss_history, weight_save_freq=weight_save_freq, weight_save_path=weight_save_path,
+                      is_save_weight=is_save_weight)
 
         if cuda_enable and cuda_mode == 'ddp':
             dist.barrier()

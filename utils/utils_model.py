@@ -353,7 +353,7 @@ def get_lr(optimizer):
 
 def fit_one_epoch(rank, model_train, model, num_classes, cur_epoch, epoch_step, epoch_step_val, gen, gen_val,
                   total_epoch, cls_weights, cuda_enable, optimizer, fp16_enable, focal_loss_enable, dice_loss_enable,
-                  scaler, eval_freq, loss_history, weight_save_freq, weight_save_path):
+                  scaler, eval_freq, loss_history, weight_save_freq, weight_save_path, is_save_weight,):
     total_loss = 0.0
     total_f_score = 0.0
 
@@ -496,12 +496,12 @@ def fit_one_epoch(rank, model_train, model, num_classes, cur_epoch, epoch_step, 
             best_weight_save_path = os.path.join(weight_save_path, 'best_weight')
             if not os.path.exists(best_weight_save_path):
                 os.makedirs(best_weight_save_path)
+            if is_save_weight:
+                if len(loss_history.val_loss) <= 1 or (val_loss / epoch_step_val) <= min(loss_history.val_loss):
+                    torch.save(model.state_dict(), os.path.join(best_weight_save_path, 'best_val_loss.pth'))
 
-            if len(loss_history.val_loss) <= 1 or (val_loss / epoch_step_val) <= min(loss_history.val_loss):
-                torch.save(model.state_dict(), os.path.join(best_weight_save_path, 'best_val_loss.pth'))
-
-            if (val_f_score / epoch_step_val) >= max(loss_history.val_f_scores):
-                torch.save(model.state_dict(), os.path.join(best_weight_save_path, 'best_val_f_score.pth'))
+                if (val_f_score / epoch_step_val) >= max(loss_history.val_f_scores):
+                    torch.save(model.state_dict(), os.path.join(best_weight_save_path, 'best_val_f_score.pth'))
 
         # --------------------------------------保存权重(每一周期都保存)---------------------------------
         if (cur_epoch % weight_save_freq == 0 and cur_epoch != 0) or cur_epoch + 1 == total_epoch:
