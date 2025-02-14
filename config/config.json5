@@ -2,15 +2,12 @@
     //  数据集参数
     dataset: {
         //    数据集位置
-        path: ".\\data\\dataset\\processed_dataset",
+        path: "D:\\毕设\\CDFSS\\data\\dataset\\CHASEDB1_VOC",
+        // 是否自动获取num_classes和name_classes，为true后num_classes和name_classes将无效
+        auto_get_num_name: true,
         //    数据集中待划分种类（包含背景）
         num_classes: 10,
-        //    如果数据集不均衡，手动设置cls_weight
-        cls_weight: {
-            enable: false,
-            cls_weight: [1, 1, 1, 1],
-        },
-        //    不同灰度的含义（从0~。。。）
+        //    不同灰度的含义（从0~。。。）,
         name_classes: [
             'Background',
             'Building-flooded',
@@ -23,7 +20,28 @@
             'Pool',
             'Grass'
         ],
-        //    全局灰度图片颜色设置
+        //    预处理参数
+        preprocess_param: {
+            // 启用预处理
+            enable: false,
+            //      划分参数
+            divide: {
+                //        是否需要划分数据集
+                need_divide: true,
+                //        训练集占比
+                divide_percent: [0.7,0.2,0.1],
+            },
+            //      裁剪参数（针对过大的图片）
+            random_crop: {
+                //        需要裁剪
+                need_crop: false,
+                //        裁剪尺寸(w,h)（该尺寸需要比所有图片大，并且推荐和前面的input_size接近，防止细节丢失）
+                size: [768, 768],
+            },
+            // 是否在预处理中对灰度图片着色
+            need_color: false,
+        },
+              //    全局灰度图片颜色设置
         color: {
             need_color: true,
             //      是否对灰度图片进行自动色彩映射
@@ -36,23 +54,11 @@
                 [255, 0, 0],
             ]
         },
-        //    预处理参数
-        preprocess_param: {
-            //      划分参数
-            divide: {
-                //        是否需要划分数据集
-                need_divide: false,
-                //        训练集占比
-                divide_percent: [0.7,0.15,0.15],
-            },
-            //      裁剪参数（针对过大的图片）
-            random_crop: {
-                //        需要裁剪
-                need_crop: true,
-                //        裁剪尺寸(w,h)（该尺寸需要比所有图片大，并且推荐和前面的input_size接近，防止细节丢失）
-                size: [768, 768],
-            },
-        },
+        //    如果数据集不均衡，手动设置cls_weight,
+        cls_weight: {
+            enable: false,
+            cls_weight: [1, 1, 1, 1]
+        }
     },
     base: {
         //    全局随机数种子
@@ -60,7 +66,7 @@
         //    训练过程
         process_param: {
             //      是否训练
-            train: true,
+            train: false,
             //      是否预测
             predict: true
         }
@@ -139,6 +145,6 @@
     pred: {
         cuda: true,
         save_path: ".\\results\\predict_out",
-        model_path: ".\\results\\saved_weight\\best_weight\\best_val_loss.pth"
+        model_path: ".\\results\\saved_weight\\best_weight\\best_val_f_score.pth"
     }
 }

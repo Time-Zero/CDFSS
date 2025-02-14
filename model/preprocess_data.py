@@ -81,7 +81,7 @@ def preprocess_data():
         print(Fore.GREEN + '图片裁剪完成' + Style.RESET_ALL)
 
     # ------------------------ 是否需要将分割图片中的灰度图片进行着色操作来提高可读性--------------------------------
-    need_color = config.need_color()
+    need_color = config.preprocess_color()
     if need_color:
         print(Fore.GREEN + '启用灰度图片着色，将执行该操作' + Style.RESET_ALL)
 
@@ -101,6 +101,8 @@ def preprocess_data():
 
             try:
                 image = Image.open(os.path.join(gray_image_path, file_name))
+                if image.mode != 'L':
+                    image = image.convert('L')
             except Exception as e:
                 continue
 

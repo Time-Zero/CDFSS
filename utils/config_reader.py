@@ -8,6 +8,8 @@ from utils.singleton import singleton
 @singleton
 class ConfigReader:
     def __init__(self):
+        self.__num_classes = None
+        self.__name_classes = None
         self.__dataset_path = None
         self.file_path = "./config/config.json5"
         self.data = None
@@ -34,6 +36,8 @@ class ConfigReader:
 
         # --------------------------dataset参数---------------------------------------
         self.__dataset_path = self.data['dataset']['path']
+        self.__preprocess_enable = self.data['dataset']['preprocess_param']['enable']
+        self.__preprocess_color = self.data['dataset']['preprocess_param']['need_color']
         self.__need_divide = self.data['dataset']['preprocess_param']['divide']['need_divide']
         self.__divide_per = self.data['dataset']['preprocess_param']['divide']['divide_percent']
         self.__need_crop = self.data['dataset']['preprocess_param']['random_crop']['need_crop']
@@ -45,6 +49,7 @@ class ConfigReader:
         self.__cls_weight_enable = self.data['dataset']['cls_weight']['enable']
         self.__cls_weight = self.data['dataset']['cls_weight']['cls_weight']
         self.__name_classes = self.data['dataset']['name_classes']
+        self.__is_auto_get_num_name = self.data['dataset']['auto_get_num_name']
 
         # ----------------------------模型参数-------------------------------------
         self.__num_workers = self.data['model']['num_workers']
@@ -84,6 +89,15 @@ class ConfigReader:
         self.__pred_model_path = self.data['pred']['model_path']
         self.__pred_cuda = self.data['pred']['cuda']
 
+    def preprocess_color(self):
+        return self.__preprocess_color
+
+    def is_preprocess(self):
+        return self.__preprocess_enable
+
+    def is_auto_get_num_name(self):
+        return self.__is_auto_get_num_name
+
     def set_conf_path(self, conf_path):
         self.__dataset_path = conf_path
         self.__read_config()
@@ -96,6 +110,9 @@ class ConfigReader:
 
     def get_name_classes(self):
         return self.__name_classes
+
+    def set_name_classes(self, name_classes):
+        self.__name_classes = name_classes
 
     def pred_cuda_enable(self):
         return self.__pred_cuda
@@ -208,6 +225,9 @@ class ConfigReader:
 
     def need_color(self):
         return self.__need_color
+
+    def set_num_classes(self, num_classes):
+        self.__num_classes = num_classes
 
     def get_num_classes(self):
         return self.__num_classes

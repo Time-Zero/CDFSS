@@ -1,8 +1,11 @@
 import colorsys
 import os
 import random
+import sys
 from copy import deepcopy
 
+import cv2
+import numpy as np
 from PIL import Image
 from tqdm import tqdm
 
@@ -15,8 +18,11 @@ def dataset_divide(dataset_path: str, divide_per: list) -> None:
     :return:
     """
     train_per, val_per, test_per = divide_per
+    train_per = round(train_per, 2)
+    val_per = round(val_per, 2)
+    test_per = round(test_per, 2)
 
-    if train_per + val_per + test_per != 1.:
+    if not (abs(train_per + val_per + test_per - 1) < 1e-9):
         raise ValueError('train_per + val_per + test_per 不为 1.!')
 
     imageset_path = os.path.join(dataset_path, 'ImageSets/Segmentation')
@@ -134,3 +140,23 @@ def grayscale2colored(image: Image, num_classes: int, color_map: list) -> Image:
 
     image.putpalette(palette)
     return image
+
+def count_unique_gray_levels(images_path):
+    """
+    统计灰度值数量
+    :param images_path: 存放图像文件夹
+    :return: 灰度值数量,灰度值集合
+    """
+    unique_gray_levels = set()
+
+    for filename in tqdm(os.listdir(images_path), desc="Get Gray Levels", position=0, leave=True, file=sys.stdout):
+        if filename.endswith(('.png', '.jpg', '.jpeg')):
+            image_path = os.path.join(images_path, filename)
+            image = Image.open(image_path)
+
+            if image is not None:
+                image_np = np.array(image, dtype=np.uint8)
+                unique_levels = np.unique(image_np)
+                unique_gray_levels.update(unique_levels)
+
+    return len(unique_gray_levels), unique_gray_levels

@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 
 from PIL import Image
@@ -27,15 +28,24 @@ def predict():
     pred_img_save_path = os.path.join(save_path, 'pred_img_out')
     if not os.path.exists(miou_save_path):
         os.makedirs(miou_save_path)
+    else:
+        shutil.rmtree(miou_save_path)
+        os.makedirs(miou_save_path)
+
     if not os.path.exists(pred_img_save_path):
         os.makedirs(pred_img_save_path)
+    else:
+        shutil.rmtree(pred_img_save_path)
+        os.makedirs(pred_img_save_path)
+
 
     dataset_path = config.get_dataset_path()
     label_path = os.path.join(dataset_path, 'SegmentationClass')
     image_ids = open(os.path.join(dataset_path, "ImageSets\\Segmentation\\test.txt")).read().splitlines()
 
-    print(Fore.BLUE + '*' * 16 + '加载预测模型中' + '*' * 16 + Style.RESET_ALL)
-    model = SegformerPredict(model_path=config.get_model_path(), num_class=config.get_num_classes(),
+    model_path = config.get_model_path()
+    print(Fore.BLUE + '*' * 16 + f'加载预测模型: {os.path.basename(model_path)}' + '*' * 16 + Style.RESET_ALL)
+    model = SegformerPredict(model_path=model_path, num_class=config.get_num_classes(),
                              backbone=config.get_phi(),
                              input_shape=config.get_input_size(), cuda=config.pred_cuda_enable())
     print(Fore.BLUE + '*' * 16 + '模型加载成功' + '*' * 16 + Style.RESET_ALL)
