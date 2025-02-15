@@ -160,3 +160,26 @@ def count_unique_gray_levels(images_path):
                 unique_gray_levels.update(unique_levels)
 
     return len(unique_gray_levels), unique_gray_levels
+
+def bin_image_convert(image_path):
+    flag = False
+
+    for filename in tqdm(os.listdir(image_path), desc="Get Mode", position=0, leave=True, file=sys.stdout):
+        if filename.endswith(('.png', '.jpg', '.jpeg')):
+            file_path = os.path.join(image_path, filename)
+            image = Image.open(file_path)
+
+            if image is not None:
+                if image.mode == '1':
+                    image = image.convert('L')
+                    image_array = np.array(image)
+
+                    image_array[image_array == 255] = 1
+                    image = Image.fromarray(image_array, mode='L')
+
+                    image.save(file_path)
+
+                    if not flag:
+                        flag = True
+
+    return flag

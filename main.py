@@ -7,7 +7,8 @@ from model.predict import predict
 from model.preprocess_data import preprocess_data
 from model.train import train_controller
 from utils.config_reader import ConfigReader
-from utils.utils_dataset import count_unique_gray_levels
+from utils.utils_common import func_print
+from utils.utils_dataset import count_unique_gray_levels, bin_image_convert
 
 
 def main():
@@ -30,23 +31,34 @@ def main():
 
     config = ConfigReader()
 
+
+    # 判断是不是二值图
+    func_print('blue', 16, '识别SegmentationImage类别中')
+    is_bin_image = bin_image_convert(os.path.join(config.get_dataset_path(), 'SegmentationClass'))
+    gray_levels_set = None
+    num_gray_levels = None
+    if is_bin_image:
+        func_print('yellow', 0, '检测到二值图，将转为灰度图')
+        gray_levels_set = {0, 1}
+        num_gray_levels = 2
+    func_print('blue', 16, '识别完成')
+
+    # 如果不是二值图并且启用了自动灰度推理
     if config.is_auto_get_num_name():
-        print(Fore.BLUE + 16 * '*' + '启用自动灰度范围推理' + 16 * '*' + Style.RESET_ALL)
-        dataset_path = config.get_dataset_path()
-        segmentation_path = os.path.join(dataset_path, 'SegmentationClass')
-        num_gray_levels, gray_levels_set = count_unique_gray_levels(segmentation_path)
-        print(Fore.BLUE + 16 * '*' + '自动灰度范围推理完成' + 16 * '*' + Style.RESET_ALL)
+        if not is_bin_image:
+            print(Fore.BLUE + 16 * '*' + '启用自动灰度范围推理' + 16 * '*' + Style.RESET_ALL)
+            dataset_path = config.get_dataset_path()
+            segmentation_path = os.path.join(dataset_path, 'SegmentationClass')
+            num_gray_levels, gray_levels_set = count_unique_gray_levels(segmentation_path)
+            print(Fore.BLUE + 16 * '*' + '自动灰度范围推理完成' + 16 * '*' + Style.RESET_ALL)
 
-        # 对灰度值255进行处理
-        if 255 in gray_levels_set:
-            flag = input(Fore.YELLOW + '出现灰度值255，是否舍弃(Y/n): ' + Style.RESET_ALL)
-            while flag != 'Y' or flag != 'n':
-                flag = input(Fore.RED + '输入错误，请重新输入: ' + Style.RESET_ALL)
-
-            if flag == 'Y':
+            # 对灰度值255进行处理
+            if 255 in gray_levels_set:
                 gray_levels_set.remove(255)
+                num_gray_levels -= 1
 
         # 根据灰度值自动生成name_classes
+
         gray_levels_list = sorted(list(gray_levels_set))
         name_classes = [f'{i}-{value}' for i, value in enumerate(gray_levels_list)]
         config.set_name_classes(name_classes)

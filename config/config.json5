@@ -39,11 +39,10 @@
                 size: [768, 768],
             },
             // 是否在预处理中对灰度图片着色
-            need_color: false,
+            need_color: true,
         },
               //    全局灰度图片颜色设置
         color: {
-            need_color: true,
             //      是否对灰度图片进行自动色彩映射
             auto_color: true,
             //      不同类的灰度映射到的颜色（如果不采用自动色彩映射）
@@ -145,6 +144,8 @@
     pred: {
         cuda: true,
         save_path: ".\\results\\predict_out",
-        model_path: ".\\results\\saved_weight\\best_weight\\best_val_f_score.pth"
+        //model_path: ".\\results\\saved_weight\\best_weight\\best_val_f_score.pth",
+        model_path: ".\\results\\saved_weight\\best_weight\\best_val_loss.pth",
+        out_color: true,
     }
 }

@@ -194,7 +194,7 @@ def train(rank: int = 0):
     unfreeze_flag = False
     freeze_train = config.freeze_train_enable()
     if freeze_train:
-        is_freeze_weight = False
+        is_save_weight = False
         for param in model.backbone.parameters():
             param.requires_grad = False
 

@@ -44,7 +44,6 @@ class ConfigReader:
         self.__crop_size = self.data['dataset']['preprocess_param']['random_crop']['size']
         self.__auto_color = self.data['dataset']['color']['auto_color']
         self.__color_map = self.data['dataset']['color']['colors_map']
-        self.__need_color = self.data['dataset']['color']['need_color']
         self.__num_classes = self.data['dataset']['num_classes']
         self.__cls_weight_enable = self.data['dataset']['cls_weight']['enable']
         self.__cls_weight = self.data['dataset']['cls_weight']['cls_weight']
@@ -88,6 +87,10 @@ class ConfigReader:
         self.__pred_res_save_path = self.data['pred']['save_path']
         self.__pred_model_path = self.data['pred']['model_path']
         self.__pred_cuda = self.data['pred']['cuda']
+        self.__pre_out_color = self.data['pred']['out_color']
+
+    def pre_out_color(self):
+        return self.__pre_out_color
 
     def preprocess_color(self):
         return self.__preprocess_color
@@ -222,9 +225,6 @@ class ConfigReader:
 
     def get_color_map(self):
         return self.__color_map
-
-    def need_color(self):
-        return self.__need_color
 
     def set_num_classes(self, num_classes):
         self.__num_classes = num_classes

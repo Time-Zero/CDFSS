@@ -15,7 +15,7 @@ from utils.utils_predict import compute_miou, show_results
 def predict():
     config = ConfigReader()
 
-    need_color = config.need_color()
+    need_color = config.pre_out_color()
     colors_map = None
     if need_color:
         if config.get_auto_color():

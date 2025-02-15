@@ -36,19 +36,15 @@ def preprocess_data():
         save_path = os.path.join("./results", 'processed_dataset')
         if not os.path.exists(save_path):
             os.makedirs(save_path)
+        else:
+            shutil.rmtree(save_path)
+            os.makedirs(save_path)
         config.set_dataset_path(save_path)  # 只要经过处理，那么dataset_path就会改变
 
-        if os.path.exists(os.path.join(save_path, 'ImageSets')):
-            shutil.rmtree(os.path.join(save_path, 'ImageSets'))
         shutil.copytree(imagesets_path, os.path.join(save_path, 'ImageSets'))
 
         jpeg_save_path = os.path.join(save_path, 'JPEGImages')
         segmentation_save_path = os.path.join(save_path, 'SegmentationClass')
-        if os.path.exists(jpeg_save_path):
-            shutil.rmtree(jpeg_save_path)
-        if os.path.exists(segmentation_save_path):
-            shutil.rmtree(segmentation_save_path)
-
         if not os.path.exists(jpeg_save_path):
             os.makedirs(jpeg_save_path)
         if not os.path.exists(segmentation_save_path):
