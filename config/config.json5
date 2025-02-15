@@ -65,7 +65,7 @@
         //    训练过程
         process_param: {
             //      是否训练
-            train: false,
+            train: true,
             //      是否预测
             predict: true
         }
@@ -73,27 +73,20 @@
     model: {
         //    单个gpu的工作线程数
         num_workers: 4,
-        //    启用fp16，这将减少内存占用，让部分无法训练的模型可以训练
-        fp16: false,
-        //  cuda有关参数
-        cuda_param: {
-            //      是否启用cuda
-            cuda: true,
-            //        训练模式:
-            //          none: 单机单卡
-            //          dp(dataparalle): 单机多卡
-            //          ddp(DistributedDataParallel): 单机多卡或多机多卡
-            mode: "none",
-            //      启用的gpu
-            visible_device: [0,1]
-        },
+
         //  模型规模
         phi: 'b0',
+
         //    输入模型的大小(w,h)
         input_size: [768, 768],
-        //    预训练参数配置
     },
     train: {
+        //    启用fp16，这将减少内存占用，让部分无法训练的模型可以训练
+        fp16: false,
+
+        //      是否启用cuda
+        cuda: true,
+
         //  是否使用focal loss来防止正负样本不平衡
         focal_loss: false,
         //  建议选项：

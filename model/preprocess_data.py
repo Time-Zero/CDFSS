@@ -3,6 +3,7 @@ import shutil
 from colorama import Fore, Style
 
 from utils.config_reader import ConfigReader
+from utils.utils_common import func_print
 from utils.utils_dataset import *
 
 
@@ -16,15 +17,15 @@ def preprocess_data():
     # -------------------------是否重新划分数据集----------------------------
     need_divide = config.need_divide()
     if need_divide:
-        print(Fore.GREEN + '启用数据重划分，将执行该操作' + Style.RESET_ALL)
+        func_print('blue', 16, '启用数据重划分，将执行该操作')
         divide_percent = config.get_divide_percent()
         dataset_divide(dataset_path, divide_percent)
-        print(Fore.GREEN + '数据重划分完成' + Style.RESET_ALL)
+        func_print('blue', 16, '数据重划分完成')
 
     # -----------------------是否需要裁剪图片-----------------------------
     need_crop = config.need_crop()
     if need_crop:
-        print(Fore.GREEN + '启用图片裁剪，将执行该操作' + Style.RESET_ALL)
+        func_print('blue', 16 , '启用图片裁剪，将执行该操作')
         imagesets_path = os.path.join(dataset_path, 'ImageSets')
         jpegimages_path = os.path.join(dataset_path, 'JPEGImages')
         segmentations_path = os.path.join(dataset_path, 'SegmentationClass')
@@ -74,12 +75,12 @@ def preprocess_data():
             label.save(os.path.join(segmentation_save_path, file_name + '.png'))
 
         pbar.close()
-        print(Fore.GREEN + '图片裁剪完成' + Style.RESET_ALL)
+        func_print('blue', 16, '图片裁剪完成')
 
     # ------------------------ 是否需要将分割图片中的灰度图片进行着色操作来提高可读性--------------------------------
     need_color = config.preprocess_color()
     if need_color:
-        print(Fore.GREEN + '启用灰度图片着色，将执行该操作' + Style.RESET_ALL)
+        func_print('blue', 16, '启用灰度图片着色，将执行该操作')
 
         auto_color = config.get_auto_color()
         if auto_color:
@@ -106,4 +107,4 @@ def preprocess_data():
             image.save(os.path.join(gray_image_path, file_name))
 
         pbar.close()
-        print(Fore.GREEN + '灰度图片着色完成' + Style.RESET_ALL)
+        func_print('blue', 16, '灰度图片着色完成')

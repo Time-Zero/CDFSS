@@ -32,24 +32,26 @@ def train_controller():
     if not config.cuda_enable():
         train()
     else:
-        cuda_mode = config.get_cuda_mode()
-        os.environ['CUDA_VISIBLE_DEVICES'] = ",".join(map(str, config.get_cuda_visible_gpus()))
+        # 启用cuDNN加速
+        cudnn.enabled = True
+        # 允许cuDNN自动寻找最优算法
+        cudnn.benchmark = True
+        # 确保结果可重复性，可以根据需要启用或禁用
+        cudnn.deterministic = True
 
-        if cuda_mode == 'ddp':
-            mp.spawn(train,
-                     nprocs=torch.cuda.device_count(),
-                     join=True)
+        gpu_count = torch.cuda.device_count()
+        if gpu_count > 1:
+            mp.spawn(train, nprocs=gpu_count, join=True)
         else:
             train()
 
 
 def train(rank: int = 0):
     config = ConfigReader()
-    cuda_enable = config.cuda_enable()
-    cuda_mode = config.get_cuda_mode()
 
-    if cuda_enable:
-        devices_ids = config.get_cuda_visible_gpus()
+    cuda_enable = config.cuda_enable()
+
+    gpu_count = torch.cuda.device_count()
 
     # ----------------------初始化全局随机数种子-------------------
     random_seed_init(config.get_random_seed())
@@ -69,15 +71,12 @@ def train(rank: int = 0):
     else:
         # gpu模式
 
-        if cuda_mode == 'none':
-            device = torch.device('cuda')
-        elif cuda_mode == 'dp':
-            # dp模式
+        if gpu_count == 1:
             device = torch.device('cuda')
         else:
             # ddp模式
             plat = platform.system()
-            backend = 'gloo' if plat == 'Windows' else 'nccl'
+            backend = 'gloo' if plat in ('Windows','windows') else 'nccl'
             world_size = torch.cuda.device_count()
             addr = "localhost"
             port = 23456
@@ -85,16 +84,12 @@ def train(rank: int = 0):
                                     rank=rank, init_method=f"tcp://{addr}:{port}?use_libuv=0")
             device = torch.device('cuda', rank)
 
-            if rank == 0:
-                print(Fore.BLUE + f"[{os.getpid()}] (rank = {rank}) 训练中...." + Style.RESET_ALL)
-                print(Fore.BLUE + f"Gpu Device Count : {world_size}" + Style.RESET_ALL)
-
     # ------------------------------模型初始化（预训练权重加载）---------------------------
     num_classes = config.get_num_classes()
     phi = config.get_phi()
     if not config.pretrained_enable():
         if rank == 0:
-            print(Fore.GREEN + '不使用预训练权重' + Style.RESET_ALL)
+            print('不使用预训练权重')
         # 不使用预训练权重
         model = SegFormer(num_classes=num_classes, phi=phi, pretrained=False, backbone_weight_path='')
     else:
@@ -102,7 +97,7 @@ def train(rank: int = 0):
 
         if weight_mode == 'backbone':
             if rank == 0:
-                print(Fore.GREEN + f'主干网络将加载预训练权重, path: {weight_path}' + Style.RESET_ALL)
+                print(f'主干网络将加载预训练权重: {os.path.basename(weight_path)}')
             # 主干网络使用预训练权重
             model = SegFormer(num_classes=num_classes, phi=phi, pretrained=True, backbone_weight_path=weight_path)
         else:
@@ -110,7 +105,7 @@ def train(rank: int = 0):
             model = SegFormer(num_classes=num_classes, phi=phi, pretrained=False, backbone_weight_path='')
 
             if rank == 0:
-                print(Fore.GREEN + f'全局网络将加载预训练权重, path: {weight_path}' + Style.RESET_ALL)
+                print(f'全局网络将加载预训练权重: {os.path.basename(weight_path)}')
 
             model_dict = model.state_dict()
             pretrained_dict = torch.load(weight_path, map_location=device, weights_only=True)
@@ -128,9 +123,9 @@ def train(rank: int = 0):
             if rank == 0:
                 print(Fore.GREEN + f'加载成功的权重为: {str(load_key)[:500]}')
                 print(f'加载成功的权重数量为: {len(load_key)}' + Style.RESET_ALL)
-                print(Fore.YELLOW + f'加载失败的权重为: {str(no_load_key)[:500]}')
+                print(Fore.RED + f'加载失败的权重为: {str(no_load_key)[:500]}')
                 print(f'加载失败的权重数量为: {len(no_load_key)}' + Style.RESET_ALL)
-                print(Fore.BLUE + f'head有权重加载失败是正常的' + Style.RESET_ALL)
+                print(Fore.YELLOW + f'head有权重加载失败是正常的' + Style.RESET_ALL)
 
     # -------------------------------------- 启用tensorboard---------------------------------
     if rank == 0:
@@ -153,19 +148,15 @@ def train(rank: int = 0):
     model_train = model.train()
 
     if cuda_enable:
-        if torch.cuda.device_count() > 1 and cuda_mode == 'ddp':
+        if gpu_count > 1:
             model_train = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model_train)
         else:
             print(Fore.YELLOW + 'Sync_Batchnorm没有启用，可能是由于单卡训练或非DDP模式' + Style.RESET_ALL)
 
         # ----------------------------分布式训练时将模型切分------------------------------------
-        if cuda_mode == 'none':
+        if gpu_count == 1:
             model_train.cuda()
-        elif cuda_mode == 'dp':
-            model_train = torch.nn.DataParallel(model_train, device_ids=devices_ids)
-            cudnn.benchmark = True
-            model_train.cuda()
-        elif cuda_mode == 'ddp':
+        else:
             model_train = model_train.cuda(rank)
             model_train = DDP(model_train, device_ids=[rank], find_unused_parameters=True)
 
@@ -231,7 +222,7 @@ def train(rank: int = 0):
     train_dataset = SegmentationDataset(train_lines, input_shape, num_classes, True, dataset_path)
     val_dataset = SegmentationDataset(val_lines, input_shape, num_classes, False, dataset_path)
 
-    if cuda_enable and cuda_mode == 'ddp':
+    if cuda_enable and gpu_count > 1:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset, shuffle=True, )
         val_sampler = torch.utils.data.distributed.DistributedSampler(val_dataset, shuffle=False, )
         batch_size = batch_size // torch.cuda.device_count()
@@ -253,7 +244,7 @@ def train(rank: int = 0):
 
     weight_save_freq, weight_save_path = config.get_weight_save_param()
 
-    if cuda_enable and cuda_mode == 'ddp':
+    if cuda_enable and gpu_count > 1:
         dist.barrier()
 
     for epoch in range(init_epoch, unfreeze_epoch):
@@ -281,7 +272,7 @@ def train(rank: int = 0):
             if epoch_step == 0 or epoch_step_val == 0:
                 raise ValueError("数据集过小，无法继续进行训练，请扩充数据集。")
 
-            if cuda_enable and cuda_mode == 'ddp':
+            if cuda_enable and gpu_count > 1:
                 batch_size = batch_size // torch.cuda.device_count()
 
             gen = DataLoader(train_dataset, shuffle=shuffle, batch_size=batch_size, num_workers=num_workers,
@@ -293,7 +284,7 @@ def train(rank: int = 0):
 
             unfreeze_flag = True
 
-        if cuda_enable and cuda_mode == 'ddp':
+        if cuda_enable and gpu_count > 1:
             train_sampler.set_epoch(epoch)
 
         set_optimizer_lr(optimizer, lr_scheduler_func, epoch)
@@ -306,7 +297,7 @@ def train(rank: int = 0):
                       loss_history=loss_history, weight_save_freq=weight_save_freq, weight_save_path=weight_save_path,
                       is_save_weight=is_save_weight)
 
-        if cuda_enable and cuda_mode == 'ddp':
+        if cuda_enable and gpu_count > 1:
             dist.barrier()
 
     if rank == 0:

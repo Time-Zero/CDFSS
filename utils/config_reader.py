@@ -8,6 +8,8 @@ from utils.singleton import singleton
 @singleton
 class ConfigReader:
     def __init__(self):
+        self.__is_predict = None
+        self.__cuda = None
         self.__num_classes = None
         self.__name_classes = None
         self.__dataset_path = None
@@ -52,15 +54,12 @@ class ConfigReader:
 
         # ----------------------------模型参数-------------------------------------
         self.__num_workers = self.data['model']['num_workers']
-        self.__fp16 = self.data['model']['fp16']
-        self.__cuda_enable = self.data['model']['cuda_param']['cuda']
-        self.__cuda_mode = self.data['model']['cuda_param']['mode']
-        self.__cuda_visible_device = self.data['model']['cuda_param']['visible_device']
-        # self.__cuda_master_gpu = self.data['model']['cuda_param']['master_gpu']
         self.__phi = self.data['model']['phi']
         self.__input_size = self.data['model']['input_size']
 
         # ------------------------------train------------------------------------------
+        self.__fp16 = self.data['train']['fp16']
+        self.__cuda_enable = self.data['train']['cuda']
         self.__focal_loss = self.data['train']['focal_loss']
         self.__dice_loss = self.data['train']['dice_loss']
         self.__eval_freq = self.data['train']['eval_freq']
@@ -116,6 +115,9 @@ class ConfigReader:
 
     def set_name_classes(self, name_classes):
         self.__name_classes = name_classes
+    
+    def set_pred_cuda_enable(self, pred_cuda_enable):
+        self.__is_predict = pred_cuda_enable
 
     def pred_cuda_enable(self):
         return self.__pred_cuda
@@ -179,19 +181,8 @@ class ConfigReader:
     def pretrained_enable(self):
         return self.__pretrained
 
-    # def get_cuda_master_gpu(self):
-    #     assert self.__cuda_master_gpu in self.__cuda_visible_device, 'cuda_master_gpu不在cuda可见gpu中'
-    #
-    #     return self.__cuda_master_gpu
-
-    def get_cuda_visible_gpus(self):
-        # return ",".join(map(str, self.__cuda_visible_device))
-        return self.__cuda_visible_device
-
-    def get_cuda_mode(self):
-        if self.__cuda_mode not in ['none', 'dp', 'ddp']:
-            raise ValueError('cuda模式设置错误，请检查配置文件')
-        return self.__cuda_mode
+    def set_cuda_enable(self,value: bool):
+        self.__cuda = value
 
     def cuda_enable(self):
         return self.__cuda_enable
