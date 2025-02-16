@@ -1,6 +1,7 @@
 import os
 import shutil
 import sys
+from copy import deepcopy
 
 from PIL import Image
 from colorama import Fore, Style
@@ -52,14 +53,23 @@ def predict():
 
     print(Fore.BLUE + '*' * 16 + '获取预测图片中' + '*' * 16 + Style.RESET_ALL)
     num_classes = config.get_num_classes()
+    fps_image = None
     for image_id in tqdm(image_ids, position=0, leave=True, file=sys.stdout):
         image_path = os.path.join(dataset_path, 'JPEGImages', image_id + '.jpg')
         image = Image.open(image_path)
+
+        if fps_image is None:
+            fps_image = deepcopy(image)
+
         image = model.get_miou_png(image)
+
         if need_color:
             image = grayscale2colored(image, num_classes, colors_map)
         image.save(os.path.join(pred_img_save_path, image_id + '.png'))
+
+    fps = model.get_fps(fps_image)
     print(Fore.BLUE + '*' * 16 + '获取预测图片完成' + '*' * 16 + Style.RESET_ALL)
 
+    print(Fore.GREEN + f'Current Model Predict Fps is: {1.0 / fps}' + Style.RESET_ALL)
     hist, IoUs, PA_Recall, Precision = compute_miou(label_path, pred_img_save_path, image_ids, num_classes)
     show_results(miou_save_path, hist, IoUs, PA_Recall, Precision, config.get_name_classes())

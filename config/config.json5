@@ -65,7 +65,7 @@
         //    训练过程
         process_param: {
             //      是否训练
-            train: true,
+            train: false,
             //      是否预测
             predict: true
         }
