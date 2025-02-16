@@ -1,6 +1,8 @@
 import matplotlib
 import scipy.signal
 
+from utils.singleton import singleton
+
 matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 from torch.utils.tensorboard import SummaryWriter
@@ -9,6 +11,7 @@ import torch
 from colorama import Fore, Style
 
 
+@singleton
 class LossHistory:
     def __init__(self, log_dir, model, input_shape):
         self.log_dir = log_dir

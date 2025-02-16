@@ -28,7 +28,6 @@ class SegformerPredict:
         self.net = self.net.eval()
 
         if self.cuda:
-            self.net = nn.DataParallel(self.net)
             self.net = self.net.cuda()
 
     def get_miou_png(self, image):
@@ -65,8 +64,8 @@ class SegformerPredict:
             # --------------------------------------#
             #   将灰条部分截取掉
             # --------------------------------------#
-            pr = pr[int((self.input_shape[0] - nh) // 2): int((self.input_shape[0] - nh) // 2 + nh), \
-                 int((self.input_shape[1] - nw) // 2): int((self.input_shape[1] - nw) // 2 + nw)]
+            pr = pr[int((self.input_shape[1] - nh) // 2): int((self.input_shape[1] - nh) // 2 + nh), \
+                 int((self.input_shape[0] - nw) // 2): int((self.input_shape[0] - nw) // 2 + nw)]
             # ---------------------------------------------------#
             #   进行图片的resize
             # ---------------------------------------------------#

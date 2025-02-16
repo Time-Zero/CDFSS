@@ -60,7 +60,6 @@ def main():
             func_print('blue', 16, '灰度自动推理完成')
 
 
-
         # 根据灰度值自动生成name_classes
         gray_levels_list = sorted(list(gray_levels_set))
         name_classes = [f'{i}-{value}' for i, value in enumerate(gray_levels_list)]
