@@ -1,3 +1,5 @@
+import time
+
 import cv2
 import numpy as np
 import torch
@@ -77,3 +79,49 @@ class SegformerPredict:
 
         image = Image.fromarray(np.uint8(pr))
         return image
+
+    def get_fps(self, image):
+        image_data, nh, nw = resize_image(image, self.input_shape)
+
+        image_data  = np.expand_dims(np.transpose(preprocess_image(np.array(image_data, np.float32)), (2, 0, 1)), 0)
+
+        with torch.no_grad():
+            images = torch.from_numpy(image_data)
+            if self.cuda:
+                images = images.cuda()
+
+            pr = self.net(images)[0]
+            # ---------------------------------------------------#
+            #   取出每一个像素点的种类
+            # ---------------------------------------------------#
+            pr = F.softmax(pr.permute(1, 2, 0), dim=-1).cpu().numpy().argmax(axis=-1)
+            # --------------------------------------#
+            #   将灰条部分截取掉
+            # --------------------------------------#
+            pr = pr[int((self.input_shape[1] - nh) // 2): int((self.input_shape[1] - nh) // 2 + nh), \
+                 int((self.input_shape[0] - nw) // 2): int((self.input_shape[0] - nw) // 2 + nw)]
+
+            t1 = None
+            test_interval = 150
+            for i in range(test_interval):
+                # 抛弃最开始的10张
+                if i == 10:
+                    t1 = time.time()
+
+                with torch.no_grad():
+                    # ---------------------------------------------------#
+                    #   图片传入网络进行预测
+                    # ---------------------------------------------------#
+                    pr = self.net(images)[0]
+                    # ---------------------------------------------------#
+                    #   取出每一个像素点的种类
+                    # ---------------------------------------------------#
+                    pr = F.softmax(pr.permute(1, 2, 0), dim=-1).cpu().numpy().argmax(axis=-1)
+                    # --------------------------------------#
+                    #   将灰条部分截取掉
+                    # --------------------------------------#
+                    pr = pr[int((self.input_shape[0] - nh) // 2): int((self.input_shape[0] - nh) // 2 + nh), \
+                         int((self.input_shape[1] - nw) // 2): int((self.input_shape[1] - nw) // 2 + nw)]
+            t2 = time.time()
+            tact_time = (t2 - t1) / test_interval
+            return tact_time

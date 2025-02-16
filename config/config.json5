@@ -75,10 +75,10 @@
         num_workers: 4,
 
         //  模型规模
-        phi: 'b0',
+        phi: 'b1',
 
         //    输入模型的大小(w,h)
-        input_size: [999, 960],
+        input_size: [768, 768],
     },
     train: {
         //    启用fp16，这将减少内存占用，让部分无法训练的模型可以训练
@@ -104,7 +104,7 @@
 //                   full: 加载全局网络
             weight: "full",
             //  预训练参数路径
-            weight_path: ".\\data\\weights\\segformer_b0_weights_voc.pth"
+            weight_path: ".\\data\\weights\\segformer_b1_weights_voc.pth"
         },
         //  选择优化器类型：adamw,adam,sgd(不推荐)
         optimizer_param: {
