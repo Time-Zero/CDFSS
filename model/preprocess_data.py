@@ -55,7 +55,7 @@ def preprocess_data():
         with open(os.path.join(imagesets_path, 'Segmentation\\trainval.txt'), 'r', encoding='utf-8') as f:
             file_list = f.readlines()
         file_list = [line.strip() for line in file_list]
-        pbar = tqdm(total=len(file_list), position=0, leave=True, unit='images')
+        pbar = tqdm(total=len(file_list), position=0, leave=True, unit='images', file=sys.stdout)
         for file_name in file_list:
             pbar.update(1)
 

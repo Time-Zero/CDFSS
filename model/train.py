@@ -27,7 +27,9 @@ def train_controller():
     训练控制模块，主要是为了使用mp.spawn来启用ddp
     :return:
     """
+
     config = ConfigReader()
+    config.mp_dump_config()
 
     if not config.cuda_enable():
         train()
@@ -48,9 +50,9 @@ def train_controller():
 
 def train(rank: int = 0):
     config = ConfigReader()
+    config.mp_reload_config()
 
     cuda_enable = config.cuda_enable()
-
     gpu_count = torch.cuda.device_count()
 
     # ----------------------初始化全局随机数种子-------------------
@@ -85,7 +87,6 @@ def train(rank: int = 0):
             device = torch.device('cuda', rank)
 
     # ------------------------------模型初始化（预训练权重加载）---------------------------
-    num_classes = config.get_num_classes()
     phi = config.get_phi()
     pretrained_enable = config.pretrained_enable()
     if not pretrained_enable:

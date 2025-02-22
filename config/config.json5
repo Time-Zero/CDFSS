@@ -65,7 +65,7 @@
         //    训练过程
         process_param: {
             //      是否训练
-            train: false,
+            train: true,
             //      是否预测
             predict: true
         }
@@ -138,7 +138,7 @@
         cuda: true,
         save_path: ".\\results\\predict_out",
         //model_path: ".\\results\\saved_weight\\best_weight\\best_val_f_score.pth",
-        model_path: ".\\results\\saved_weight\\best_weight\\best_val_loss.pth",
+        model_path: ".\\results\\saved_weight\\best_weight\\best_val_f_score.pth",
         out_color: true,
     }
 }

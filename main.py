@@ -11,14 +11,11 @@ from utils.utils_common import func_print
 from utils.utils_dataset import count_unique_gray_levels, bin_image_convert
 import torch.cuda
 
-
 def main():
+
     parser = argparse.ArgumentParser(description='CDFSS: 一个跨域小样本模型训练系统', add_help=True, epilog='请指定参数运行')
-
     parser.add_argument('-d', '--default', action='store_true', help='默认模式,手动指定所有配置')
-
     parser.add_argument('-c', '--config', type=str, help='指定配置文件')
-
     args = parser.parse_args()
 
     if args.default:
