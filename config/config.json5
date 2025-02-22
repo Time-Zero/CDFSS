@@ -2,7 +2,7 @@
     //  数据集参数
     dataset: {
         //    数据集位置
-        path: "D:\\毕设\\CDFSS\\data\\dataset\\CHASEDB1_VOC",
+        path: "E:\\毕设\\CDFSS\\data\\dataset\\CHASEDB1_VOC",
         // 是否自动获取num_classes和name_classes，为true后num_classes和name_classes将无效
         auto_get_num_name: true,
         //    数据集中待划分种类（包含背景）
@@ -23,7 +23,7 @@
         //    预处理参数
         preprocess_param: {
             // 启用预处理
-            enable: false,
+            enable: true,
             //      划分参数
             divide: {
                 //        是否需要划分数据集
@@ -39,7 +39,7 @@
                 size: [768, 768],
             },
             // 是否在预处理中对灰度图片着色
-            need_color: false,
+            need_color: true,
         },
               //    全局灰度图片颜色设置
         color: {
@@ -75,10 +75,10 @@
         num_workers: 4,
 
         //  模型规模
-        phi: 'b1',
+        phi: 'b2',
 
         //    输入模型的大小(w,h)
-        input_size: [768, 768],
+        input_size: [960, 960],
     },
     train: {
         //    启用fp16，这将减少内存占用，让部分无法训练的模型可以训练
@@ -97,14 +97,14 @@
         eval_freq: 3,
         log_dir: ".\\logs",
         pretrained: {
-            //  是否启用预训练参数
+            //  是否启用预训练参数, 如果不使用，也无法启用冻结训练
             enable: true,
             //  预训练参数加载模式：
 //                   backbone: 只加载主干网络,
 //                   full: 加载全局网络
             weight: "full",
             //  预训练参数路径
-            weight_path: ".\\data\\weights\\segformer_b1_weights_voc.pth"
+            weight_path: ".\\data\\weights\\segformer_b2_weights_voc.pth"
         },
         //  选择优化器类型：adamw,adam,sgd(不推荐)
         optimizer_param: {
@@ -118,7 +118,7 @@
             enable: true,
             init_epoch: 0,
             freeze_epoch: 40,
-            freeze_batch_size: 4,
+            freeze_batch_size: 2,
             unfreeze_epoch: 80,
             unfreeze_batch_size: 2
         },

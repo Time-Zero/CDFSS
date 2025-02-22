@@ -90,7 +90,7 @@ def preprocess_data():
 
         gray_image_path = os.path.join(config.get_dataset_path(), 'SegmentationClass')
         gray_file_list = os.listdir(gray_image_path)
-        pbar = tqdm(total=len(gray_file_list), position=0, leave=True, unit='images')
+        pbar = tqdm(total=len(gray_file_list), position=0, leave=True, unit='images', file=sys.stdout)
 
         num_classes = config.get_num_classes()
         for file_name in gray_file_list:
@@ -98,8 +98,9 @@ def preprocess_data():
 
             try:
                 image = Image.open(os.path.join(gray_image_path, file_name))
-                if image.mode != 'L':
-                    image = image.convert('L')
+
+                if image.mode == 'P':
+                    continue
             except Exception as e:
                 continue
 

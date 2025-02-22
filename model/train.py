@@ -87,7 +87,8 @@ def train(rank: int = 0):
     # ------------------------------模型初始化（预训练权重加载）---------------------------
     num_classes = config.get_num_classes()
     phi = config.get_phi()
-    if not config.pretrained_enable():
+    pretrained_enable = config.pretrained_enable()
+    if not pretrained_enable:
         if rank == 0:
             print('不使用预训练权重')
         # 不使用预训练权重
@@ -183,7 +184,7 @@ def train(rank: int = 0):
     is_save_weight = True
     init_epoch, freeze_epoch, freeze_batch_size, unfreeze_epoch, unfreeze_batch_size = config.get_epoch_param()
     unfreeze_flag = False
-    freeze_train = config.freeze_train_enable()
+    freeze_train = config.freeze_train_enable() if pretrained_enable else False
     if freeze_train:
         is_save_weight = False
         for param in model.backbone.parameters():

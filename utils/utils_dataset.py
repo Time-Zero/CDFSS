@@ -182,4 +182,5 @@ def bin_image_convert(image_path):
                     if not flag:
                         flag = True
 
+            image.close()
     return flag
