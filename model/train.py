@@ -1,6 +1,7 @@
 import datetime
 import os
 import platform
+import shutil
 from functools import partial
 
 import numpy as np
@@ -185,7 +186,8 @@ def train(rank: int = 0):
     is_save_weight = True
     init_epoch, freeze_epoch, freeze_batch_size, unfreeze_epoch, unfreeze_batch_size = config.get_epoch_param()
     unfreeze_flag = False
-    freeze_train = config.freeze_train_enable() if pretrained_enable else False
+    # freeze_train = config.freeze_train_enable() if pretrained_enable else False
+    freeze_train = config.freeze_train_enable()
     if freeze_train:
         is_save_weight = False
         for param in model.backbone.parameters():
@@ -245,6 +247,8 @@ def train(rank: int = 0):
                          worker_init_fn=partial(worker_init_fn, rank=rank, seed=seed))
 
     weight_save_freq, weight_save_path = config.get_weight_save_param()
+    if os.path.exists(weight_save_path):
+        shutil.rmtree(weight_save_path)
 
     if cuda_enable and gpu_count > 1:
         dist.barrier()

@@ -2,7 +2,7 @@
     //  数据集参数
     dataset: {
         //    数据集位置
-        path: "E:\\毕设\\CDFSS\\data\\dataset\\CHASEDB1_VOC",
+        path: "E:\\毕设\\CDFSS\\data\\dataset\\SS\\TotalText_VOC",
         // 是否自动获取num_classes和name_classes，为true后num_classes和name_classes将无效
         auto_get_num_name: true,
         //    数据集中待划分种类（包含背景）
@@ -23,7 +23,7 @@
         //    预处理参数
         preprocess_param: {
             // 启用预处理
-            enable: true,
+            enable: false,
             //      划分参数
             divide: {
                 //        是否需要划分数据集
@@ -93,7 +93,7 @@
         //      种类少（几类）时，设置为True
         //      种类多（十几类）时，如果batch_size比较大（10以上），那么设置为True
         //      种类多（十几类）时，如果batch_size比较小（10以下），那么设置为False
-        dice_loss: false,
+        dice_loss: true,
         eval_freq: 3,
         log_dir: ".\\logs",
         pretrained: {
@@ -120,7 +120,7 @@
             freeze_epoch: 40,
             freeze_batch_size: 2,
             unfreeze_epoch: 80,
-            unfreeze_batch_size: 2
+            unfreeze_batch_size: 1
         },
         //  学习率参数
         lr_param: {
@@ -137,8 +137,8 @@
     pred: {
         cuda: true,
         save_path: ".\\results\\predict_out",
-        //model_path: ".\\results\\saved_weight\\best_weight\\best_val_f_score.pth",
-        model_path: ".\\results\\saved_weight\\best_weight\\best_val_f_score.pth",
+//        model_path: ".\\results\\saved_weight\\best_weight\\best_val_f_score.pth",
+        model_path: "E:\\毕设\\CDFSS\\results\\saved_weight\\every_epoch\\ep060-loss0.389-f_score0.792.pth",
         out_color: true,
     }
 }

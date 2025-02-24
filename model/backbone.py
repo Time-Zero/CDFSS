@@ -105,21 +105,6 @@ class EfficientSelfAttention(nn.Module):
 
         self.apply(weights_init)
 
-    # def _init_weights(self, m):
-    #     if isinstance(m, nn.Linear):
-    #         nn.init.trunc_normal_(m.weight, std=.02)
-    #         if isinstance(m, nn.Linear) and m.bias is not None:
-    #             nn.init.constant_(m.bias, 0)
-    #     elif isinstance(m, nn.LayerNorm):
-    #         nn.init.constant_(m.bias, 0)
-    #         nn.init.constant_(m.weight, 1.0)
-    #     elif isinstance(m, nn.Conv2d):
-    #         fan_out = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-    #         fan_out //= m.groups
-    #         m.weight.data.normal_(0, math.sqrt(2.0 / fan_out))
-    #         if m.bias is not None:
-    #             m.bias.data.zero_()
-
     def forward(self, x, H, W):
         B, N, C = x.shape
         # bs, 16384, 32 => bs, 16384, 32 => bs, 16384, 8, 4 => bs, 8, 16384, 4

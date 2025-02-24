@@ -1,6 +1,7 @@
 import argparse
 import os.path
 
+import torch.cuda
 from colorama import Fore, Style
 
 from model.predict import predict
@@ -9,11 +10,11 @@ from model.train import train_controller
 from utils.config_reader import ConfigReader
 from utils.utils_common import func_print
 from utils.utils_dataset import count_unique_gray_levels, bin_image_convert
-import torch.cuda
+
 
 def main():
-
-    parser = argparse.ArgumentParser(description='CDFSS: 一个跨域小样本模型训练系统', add_help=True, epilog='请指定参数运行')
+    parser = argparse.ArgumentParser(description='CDFSS: 一个跨域小样本模型训练系统', add_help=True,
+                                     epilog='请指定参数运行')
     parser.add_argument('-d', '--default', action='store_true', help='默认模式,手动指定所有配置')
     parser.add_argument('-c', '--config', type=str, help='指定配置文件')
     args = parser.parse_args()
@@ -56,7 +57,6 @@ def main():
             print(f'Segmentation图像中，包括的灰度值为: {gray_levels_set}')
             func_print('blue', 16, '灰度自动推理完成')
 
-
         # 根据灰度值自动生成name_classes
         gray_levels_list = sorted(list(gray_levels_set))
         name_classes = [f'{i}-{value}' for i, value in enumerate(gray_levels_list)]
@@ -65,7 +65,7 @@ def main():
 
     gpu_count = torch.cuda.device_count()
     if gpu_count < 1:
-        func_print('yellow',16,f'检测到的可用gpu数量: {gpu_count}，已自动关闭cuda')
+        func_print('yellow', 16, f'检测到的可用gpu数量: {gpu_count}，已自动关闭cuda')
         config.set_cuda_enable(False)
         config.set_pred_cuda_enable(False)
 
@@ -77,6 +77,7 @@ def main():
 
     if config.is_predict():
         predict()
+
 
 if __name__ == '__main__':
     main()
