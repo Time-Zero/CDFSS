@@ -71,8 +71,7 @@ class ConfigReader:
         self._auto_color = self.data['dataset']['color']['auto_color']
         self._color_map = self.data['dataset']['color']['colors_map']
         self._num_classes = self.data['dataset']['num_classes']
-        self._cls_weight_enable = self.data['dataset']['cls_weight']['enable']
-        self._cls_weight = self.data['dataset']['cls_weight']['cls_weight']
+        self._cls_weight_enable = self.data['dataset']['cls_weights']['enable']
         self._name_classes = self.data['dataset']['name_classes']
         self._is_auto_get_num_name = self.data['dataset']['auto_get_num_name']
 

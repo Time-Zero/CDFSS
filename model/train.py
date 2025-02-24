@@ -20,7 +20,7 @@ from model.segformer import SegFormer
 from model.segmentaion_dataset import SegmentationDataset
 from utils.config_reader import ConfigReader
 from utils.utils_model import random_seed_init, get_lr_scheduler, seg_dataset_collate, worker_init_fn, set_optimizer_lr, \
-    fit_one_epoch
+    fit_one_epoch, compute_cls_weights_simple
 
 
 def train_controller():
@@ -30,10 +30,18 @@ def train_controller():
     """
 
     config = ConfigReader()
+    mask_path = os.path.join(config.get_dataset_path(), 'SegmentationClass')
+    num_classes = config.get_num_classes()
+    if config.cls_weight_enable():
+        cls_weights = compute_cls_weights_simple(mask_path, num_classes)
+        print(f"cls_weights: {cls_weights}")
+    else:
+        cls_weights = np.ones(num_classes, np.float32)
+
     config.mp_dump_config()
 
     if not config.cuda_enable():
-        train()
+        train(0, cls_weights)
     else:
         # 启用cuDNN加速
         cudnn.enabled = True
@@ -44,27 +52,24 @@ def train_controller():
 
         gpu_count = torch.cuda.device_count()
         if gpu_count > 1:
-            mp.spawn(train, nprocs=gpu_count, join=True)
+            mp.spawn(train, args=(cls_weights,),nprocs=gpu_count, join=True)
         else:
-            train()
+            train(0, cls_weights)
 
-
-def train(rank: int = 0):
+def train(rank: int = 0, cls_weights = None):
     config = ConfigReader()
     config.mp_reload_config()
-
+    num_classes = config.get_num_classes()
+    random_seed = config.get_random_seed()
+    dataset_path = config.get_dataset_path()
     cuda_enable = config.cuda_enable()
     gpu_count = torch.cuda.device_count()
+    phi = config.get_phi()
+    pretrained_enable = config.pretrained_enable()
+    cls_weights = np.array(cls_weights, np.float32)
 
     # ----------------------初始化全局随机数种子-------------------
-    random_seed_init(config.get_random_seed())
-
-    # ---------------------是否启用类别偏置权重来解决数据集不平衡问题----------------------
-    num_classes = config.get_num_classes()
-    if config.cls_weight_enable():
-        cls_weight = np.array(config.get_cls_weight(), dtype=np.float32)
-    else:
-        cls_weight = np.ones(num_classes, dtype=np.float32)
+    random_seed_init(random_seed)
 
     # --------------------cuda配置----------------------------
     if not cuda_enable:
@@ -88,8 +93,6 @@ def train(rank: int = 0):
             device = torch.device('cuda', rank)
 
     # ------------------------------模型初始化（预训练权重加载）---------------------------
-    phi = config.get_phi()
-    pretrained_enable = config.pretrained_enable()
     if not pretrained_enable:
         if rank == 0:
             print('不使用预训练权重')
@@ -164,7 +167,6 @@ def train(rank: int = 0):
             model_train = DDP(model_train, device_ids=[rank], find_unused_parameters=True)
 
     # --------------------------------读取数据集----------------------------------------
-    dataset_path = config.get_dataset_path()
     if rank == 0:
         print(Fore.BLUE + f'加载训练数据集: {os.path.normpath(dataset_path)}' + Style.RESET_ALL)
     with open(os.path.join(dataset_path, "ImageSets\\Segmentation\\train.txt"), 'r', encoding='utf-8') as f:
@@ -222,7 +224,6 @@ def train(rank: int = 0):
 
     # -----------------------------------------加载数据集-----------------------------------------------
     input_shape = config.get_input_size()
-    num_classes = config.get_num_classes()
     train_dataset = SegmentationDataset(train_lines, input_shape, num_classes, True, dataset_path)
     val_dataset = SegmentationDataset(val_lines, input_shape, num_classes, False, dataset_path)
 
@@ -238,13 +239,12 @@ def train(rank: int = 0):
 
     num_workers = config.get_num_workers()
     num_workers = num_workers * torch.cuda.device_count() if cuda_enable else num_workers
-    seed = config.get_random_seed()
     gen = DataLoader(train_dataset, shuffle=shuffle, batch_size=batch_size, num_workers=num_workers, pin_memory=True,
                      drop_last=True, collate_fn=seg_dataset_collate, sampler=train_sampler,
-                     worker_init_fn=partial(worker_init_fn, rank=rank, seed=seed))
+                     worker_init_fn=partial(worker_init_fn, rank=rank, seed=random_seed))
     gen_val = DataLoader(val_dataset, shuffle=shuffle, batch_size=batch_size, num_workers=num_workers, pin_memory=True,
                          drop_last=True, collate_fn=seg_dataset_collate, sampler=val_sampler,
-                         worker_init_fn=partial(worker_init_fn, rank=rank, seed=seed))
+                         worker_init_fn=partial(worker_init_fn, rank=rank, seed=random_seed))
 
     weight_save_freq, weight_save_path = config.get_weight_save_param()
     if os.path.exists(weight_save_path):
@@ -283,10 +283,10 @@ def train(rank: int = 0):
 
             gen = DataLoader(train_dataset, shuffle=shuffle, batch_size=batch_size, num_workers=num_workers,
                              pin_memory=True, drop_last=True, collate_fn=seg_dataset_collate, sampler=train_sampler,
-                             worker_init_fn=partial(worker_init_fn, rank=rank, seed=seed))
+                             worker_init_fn=partial(worker_init_fn, rank=rank, seed=random_seed))
             gen_val = DataLoader(val_dataset, shuffle=shuffle, batch_size=batch_size, num_workers=num_workers,
                                  pin_memory=True, drop_last=True, collate_fn=seg_dataset_collate, sampler=val_sampler,
-                                 worker_init_fn=partial(worker_init_fn, rank=rank, seed=seed))
+                                 worker_init_fn=partial(worker_init_fn, rank=rank, seed=random_seed))
 
             unfreeze_flag = True
 
@@ -297,7 +297,7 @@ def train(rank: int = 0):
 
         fit_one_epoch(rank=rank, model_train=model_train, model=model, num_classes=num_classes, cur_epoch=epoch,
                       epoch_step=epoch_step, epoch_step_val=epoch_step_val, gen=gen, gen_val=gen_val,
-                      total_epoch=unfreeze_epoch, cls_weights=cls_weight, cuda_enable=cuda_enable,
+                      total_epoch=unfreeze_epoch, cls_weights=cls_weights, cuda_enable=cuda_enable,
                       optimizer=optimizer, fp16_enable=config.get_fp16(), focal_loss_enable=config.focal_loss_enable(),
                       dice_loss_enable=config.dice_loss_enable(), scaler=scaler, eval_freq=config.eval_freq(),
                       loss_history=loss_history, weight_save_freq=weight_save_freq, weight_save_path=weight_save_path,

@@ -45,14 +45,14 @@ def predict():
     image_ids = open(os.path.join(dataset_path, "ImageSets\\Segmentation\\test.txt")).read().splitlines()
 
     model_path = config.get_model_path()
+    num_classes = config.get_num_classes()
     print(Fore.BLUE + '*' * 16 + f'加载预测模型: {os.path.basename(model_path)}' + '*' * 16 + Style.RESET_ALL)
-    model = SegformerPredict(model_path=model_path, num_class=config.get_num_classes(),
+    model = SegformerPredict(model_path=model_path, num_class=num_classes,
                              backbone=config.get_phi(),
                              input_shape=config.get_input_size(), cuda=config.pred_cuda_enable())
     print(Fore.BLUE + '*' * 16 + '模型加载成功' + '*' * 16 + Style.RESET_ALL)
 
     print(Fore.BLUE + '*' * 16 + '获取预测图片中' + '*' * 16 + Style.RESET_ALL)
-    num_classes = config.get_num_classes()
     fps_image = None
     for image_id in tqdm(image_ids, position=0, leave=True, file=sys.stdout):
         image_path = os.path.join(dataset_path, 'JPEGImages', image_id + '.jpg')

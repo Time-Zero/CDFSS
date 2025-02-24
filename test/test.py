@@ -6,11 +6,14 @@
 #     config.mp_dump_config()
 #     config.mp_reload_config()
 #     print(config.get_num_classes())
-from PIL import Image
-import numpy as np
+from utils.utils_model import compute_cls_weights_optimized
 
 if __name__ == "__main__":
-    file_path = 'E:\\毕设\\CDFSS\\test\\temp\\img1.png'
-    img = Image.open(file_path)
-    img_np = np.array(img)
-    print(img_np)
+    # file_path = 'E:\\毕设\\CDFSS\\test\\temp\\img1.png'
+    # img = Image.open(file_path)
+    # img_np = np.array(img)
+    # print(img_np)
+    file_path = "E:\毕设\CDFSS\data\dataset\SS\CHASEDB1_VOC\SegmentationClass"
+
+    res = compute_cls_weights_optimized(file_path,2)
+    print(res)

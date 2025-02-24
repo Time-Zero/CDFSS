@@ -10,12 +10,68 @@ import torch
 import torch.nn.functional as F
 from PIL import Image
 from colorama import Fore, Style
-from sympy.abc import alpha
 from torch import nn
 from torch.amp import autocast
 from tqdm import tqdm
 
 from utils.utils_predict import f_score
+from joblib import Parallel, delayed
+
+
+def process_single_file(filename, mask_dir, num_classes):
+    """处理单个文件（无分块）"""
+    try:
+        mask_path = os.path.join(mask_dir, filename)
+        with Image.open(mask_path) as img:
+            # 转换为灰度并验证
+            mask = np.array(img)
+
+            # 检查像素范围
+            if np.max(mask) >= num_classes:
+                raise ValueError(f"文件 {filename} 包含非法像素值 {np.max(mask)}")
+
+            # 统计像素
+            counts = np.bincount(mask.ravel(), minlength=num_classes)
+            return counts.astype(np.uint64), mask.size
+    except Exception as e:
+        print(f"处理 {filename} 出错: {str(e)}")
+        return np.zeros(num_classes, dtype=np.uint64), 0
+
+
+def compute_cls_weights_simple(mask_dir, num_classes, smooth_factor=5.0, n_jobs=-1):
+    """
+    简化版并行加速权重计算
+    Args:
+        mask_dir: mask文件夹路径
+        num_classes: 类别数
+        smooth_factor: 平滑因子
+        n_jobs: 并行进程数（-1=自动）
+    Returns:
+        weights: (num_classes,) 的numpy数组
+    """
+    # 获取文件列表
+    files = [f for f in os.listdir(mask_dir) if f.lower().endswith('.png')]
+    assert len(files) > 0, "未找到PNG文件"
+
+    # 并行处理所有文件
+    results = Parallel(n_jobs=n_jobs)(delayed(process_single_file)(f, mask_dir, num_classes)
+        for f in tqdm(files, desc="处理进度",file=sys.stdout))
+
+    # 合并统计结果
+    total_counts = np.zeros(num_classes, dtype=np.uint64)
+    total_pixels = 0
+    for counts, pixels in results:
+        total_counts += counts
+        total_pixels += pixels
+
+    # 计算权重
+    epsilon = 1e-7
+    class_freq = (total_counts.astype(np.float64) + smooth_factor) / \
+                 (total_pixels + smooth_factor * num_classes + epsilon)
+
+    weights = 1.0 / (class_freq + epsilon)
+
+    return weights / weights.sum()
 
 
 def resize_image(image, size):

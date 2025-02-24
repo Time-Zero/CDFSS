@@ -29,7 +29,7 @@
                 //        是否需要划分数据集
                 need_divide: true,
                 //        训练集占比
-                divide_percent: [0.7,0.2,0.1],
+                divide_percent: [0.1,0.2,0.7],
             },
             //      裁剪参数（针对过大的图片）
             random_crop: {
@@ -54,9 +54,8 @@
             ]
         },
         //    如果数据集不均衡，手动设置cls_weight,
-        cls_weight: {
-            enable: false,
-            cls_weight: [1, 1, 1, 1]
+        cls_weights: {
+            enable: true,
         }
     },
     base: {
@@ -94,7 +93,7 @@
         //      种类多（十几类）时，如果batch_size比较大（10以上），那么设置为True
         //      种类多（十几类）时，如果batch_size比较小（10以下），那么设置为False
         dice_loss: true,
-        eval_freq: 3,
+        eval_freq: 2,
         log_dir: ".\\logs",
         pretrained: {
             //  是否启用预训练参数, 如果不使用，也无法启用冻结训练
@@ -137,8 +136,9 @@
     pred: {
         cuda: true,
         save_path: ".\\results\\predict_out",
+        model_path: ".\\results\\saved_weight\\best_weight\\best_val_loss.pth",
 //        model_path: ".\\results\\saved_weight\\best_weight\\best_val_f_score.pth",
-        model_path: "E:\\毕设\\CDFSS\\results\\saved_weight\\every_epoch\\ep060-loss0.389-f_score0.792.pth",
+//        model_path: "E:\\毕设\\CDFSS\\results\\saved_weight\\every_epoch\\ep071-loss0.287-f_score0.871.pth",
         out_color: true,
     }
 }

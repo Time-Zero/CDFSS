@@ -1,7 +1,5 @@
 import shutil
 
-from colorama import Fore, Style
-
 from utils.config_reader import ConfigReader
 from utils.utils_common import func_print
 from utils.utils_dataset import *
@@ -88,7 +86,7 @@ def preprocess_data():
         else:
             color_map = config.get_color_map()
 
-        gray_image_path = os.path.join(config.get_dataset_path(), 'SegmentationClass')
+        gray_image_path = os.path.join(dataset_path, 'SegmentationClass')
         gray_file_list = os.listdir(gray_image_path)
         pbar = tqdm(total=len(gray_file_list), position=0, leave=True, unit='images', file=sys.stdout)
 
