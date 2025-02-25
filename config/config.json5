@@ -55,7 +55,7 @@
         },
         //    如果数据集不均衡，手动设置cls_weight,
         cls_weights: {
-            enable: true,
+            enable: false,
         }
     },
     base: {
@@ -87,7 +87,7 @@
         cuda: true,
 
         //  是否使用focal loss来防止正负样本不平衡
-        focal_loss: false,
+        focal_loss: true,
         //  建议选项：
         //      种类少（几类）时，设置为True
         //      种类多（十几类）时，如果batch_size比较大（10以上），那么设置为True

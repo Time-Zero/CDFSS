@@ -1,6 +1,6 @@
-numpy~=1.26.3
+numpy~=2.0.1
 opencv-python~=4.10.0.84
-pillow~=10.2.0
+pillow~=11.0.0
 torch==2.5.1
 torchaudio==2.5.1
 torchvision==0.20.1
@@ -8,4 +8,5 @@ colorama~=0.4.6
 tqdm~=4.67.1
 matplotlib~=3.10.0
 scipy~=1.14.1
-json5~=0.10.0
+json5~=0.9.25
+joblib~=1.4.2
