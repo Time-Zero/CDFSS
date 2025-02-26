@@ -21,7 +21,7 @@ class ConvModule(nn.Module):
         super().__init__()
         self.conv = nn.Conv2d(c1, c2, k, s, p, groups=g, bias=False)
         self.bn = nn.BatchNorm2d(c2, eps=0.001, momentum=0.03)
-        self.act    = nn.ReLU(inplace=True) if act is True else (act if isinstance(act, nn.Module) else nn.Identity())
+        self.act = nn.ReLU(inplace=True) if act is True else (act if isinstance(act, nn.Module) else nn.Identity())
 
     def forward(self, x):
         return self.act(self.bn(self.conv(x)))

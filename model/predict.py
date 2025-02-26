@@ -42,7 +42,7 @@ def predict():
 
     dataset_path = config.get_dataset_path()
     label_path = os.path.join(dataset_path, 'SegmentationClass')
-    image_ids = open(os.path.join(dataset_path, "ImageSets\\Segmentation\\test.txt")).read().splitlines()
+    image_ids = open(os.path.join(dataset_path, "ImageSets/Segmentation/test.txt")).read().splitlines()
 
     model_path = config.get_model_path()
     num_classes = config.get_num_classes()

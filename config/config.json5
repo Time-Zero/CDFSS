@@ -2,7 +2,7 @@
     //  数据集参数
     dataset: {
         //    数据集位置
-        path: "E:\\毕设\\CDFSS\\data\\dataset\\SS\\TotalText_VOC",
+        path: "./data/dataset/SS/CHASEDB1_VOC",
         // 是否自动获取num_classes和name_classes，为true后num_classes和name_classes将无效
         auto_get_num_name: true,
         //    数据集中待划分种类（包含背景）
@@ -29,7 +29,7 @@
                 //        是否需要划分数据集
                 need_divide: true,
                 //        训练集占比
-                divide_percent: [0.1,0.2,0.7],
+                divide_percent: [0.7,0.2,0.1],
             },
             //      裁剪参数（针对过大的图片）
             random_crop: {
@@ -55,7 +55,7 @@
         },
         //    如果数据集不均衡，手动设置cls_weight,
         cls_weights: {
-            enable: false,
+            enable: true,
         }
     },
     base: {
@@ -74,10 +74,10 @@
         num_workers: 4,
 
         //  模型规模
-        phi: 'b2',
+        phi: 'b4',
 
         //    输入模型的大小(w,h)
-        input_size: [960, 960],
+        input_size: [512, 512],
     },
     train: {
         //    启用fp16，这将减少内存占用，让部分无法训练的模型可以训练
@@ -87,23 +87,23 @@
         cuda: true,
 
         //  是否使用focal loss来防止正负样本不平衡
-        focal_loss: true,
+        focal_loss: false,
         //  建议选项：
         //      种类少（几类）时，设置为True
         //      种类多（十几类）时，如果batch_size比较大（10以上），那么设置为True
         //      种类多（十几类）时，如果batch_size比较小（10以下），那么设置为False
         dice_loss: true,
         eval_freq: 2,
-        log_dir: ".\\logs",
+        log_dir: "./logs",
         pretrained: {
             //  是否启用预训练参数, 如果不使用，也无法启用冻结训练
             enable: true,
             //  预训练参数加载模式：
 //                   backbone: 只加载主干网络,
 //                   full: 加载全局网络
-            weight: "full",
+            weight: "backbone",
             //  预训练参数路径
-            weight_path: ".\\data\\weights\\segformer_b2_weights_voc.pth"
+            weight_path: "./data/weights/segformer_b4_backbone_weights.pth"
         },
         //  选择优化器类型：adamw,adam,sgd(不推荐)
         optimizer_param: {
@@ -117,9 +117,9 @@
             enable: true,
             init_epoch: 0,
             freeze_epoch: 40,
-            freeze_batch_size: 2,
+            freeze_batch_size: 4,
             unfreeze_epoch: 80,
-            unfreeze_batch_size: 1
+            unfreeze_batch_size: 2
         },
         //  学习率参数
         lr_param: {
@@ -130,15 +130,14 @@
         },
         weight_save_param: {
             weight_save_freq: 1,
-            weight_save_path: ".\\results\\saved_weight"
+            weight_save_path: "./results/saved_weight"
         },
     },
     pred: {
         cuda: true,
-        save_path: ".\\results\\predict_out",
-        model_path: ".\\results\\saved_weight\\best_weight\\best_val_loss.pth",
+        save_path: "./results/predict_out",
+        model_path: "./results/saved_weight/best_weight/best_val_loss.pth",
 //        model_path: ".\\results\\saved_weight\\best_weight\\best_val_f_score.pth",
-//        model_path: "E:\\毕设\\CDFSS\\results\\saved_weight\\every_epoch\\ep071-loss0.287-f_score0.871.pth",
         out_color: true,
     }
 }

@@ -169,10 +169,10 @@ def train(rank: int = 0, cls_weights = None):
     # --------------------------------读取数据集----------------------------------------
     if rank == 0:
         print(Fore.BLUE + f'加载训练数据集: {os.path.normpath(dataset_path)}' + Style.RESET_ALL)
-    with open(os.path.join(dataset_path, "ImageSets\\Segmentation\\train.txt"), 'r', encoding='utf-8') as f:
+    with open(os.path.join(dataset_path, "ImageSets/Segmentation/train.txt"), 'r', encoding='utf-8') as f:
         train_lines = f.readlines()
         train_lines = [line.strip() for line in train_lines]
-    with open(os.path.join(dataset_path, "ImageSets\\Segmentation\\val.txt"), 'r', encoding='utf-8') as f:
+    with open(os.path.join(dataset_path, "ImageSets/Segmentation/val.txt"), 'r', encoding='utf-8') as f:
         val_lines = f.readlines()
         val_lines = [line.strip() for line in val_lines]
     num_train = len(train_lines)

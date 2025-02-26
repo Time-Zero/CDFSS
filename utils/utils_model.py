@@ -407,6 +407,8 @@ def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
 
+    return None
+
 
 def fit_one_epoch(rank, model_train, model, num_classes, cur_epoch, epoch_step, epoch_step_val, gen, gen_val,
                   total_epoch, cls_weights, cuda_enable, optimizer, fp16_enable, focal_loss_enable, dice_loss_enable,

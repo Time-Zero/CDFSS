@@ -124,7 +124,7 @@ class ConfigReader:
         return self._is_auto_get_num_name
 
     def set_conf_path(self, conf_path):
-        self.file_path = conf_path
+        self.file_path = os.path.normpath(conf_path)
         self._read_config()
 
     def is_train(self):
@@ -148,13 +148,13 @@ class ConfigReader:
         return self._pred_cuda
 
     def get_model_path(self):
-        return self._pred_model_path
+        return os.path.normpath(self._pred_model_path)
 
     def get_pred_res_save_path(self):
-        return self._pred_res_save_path
+        return os.path.normpath(self._pred_res_save_path)
 
     def get_weight_save_param(self):
-        return self._weight_save_freq, self._weight_save_path
+        return self._weight_save_freq, os.path.normpath(self._weight_save_path)
 
     def get_log_dir(self):
         return self._log_dir
@@ -201,7 +201,7 @@ class ConfigReader:
         if self._pretrained_weight not in ['full', 'backbone']:
             raise ValueError('pretrained weight 必须为 full 或 backbone')
 
-        return self._pretrained_weight, self._pretrained_weight_path
+        return self._pretrained_weight, os.path.normpath(self._pretrained_weight_path)
 
     def pretrained_enable(self):
         return self._pretrained
@@ -223,10 +223,10 @@ class ConfigReader:
         return self._fp16
 
     def get_dataset_path(self):
-        return self._dataset_path
+        return os.path.normpath(self._dataset_path)
 
     def set_dataset_path(self, dataset_path):
-        self.data['dataset']['path'] = dataset_path
+        self.data['dataset']['path'] = os.path.normpath(dataset_path)
         self._dataset_path = dataset_path
 
     def get_divide_percent(self):
@@ -253,9 +253,6 @@ class ConfigReader:
 
     def cls_weight_enable(self):
         return self._cls_weight_enable
-
-    def get_cls_weight(self) -> list:
-        return self._cls_weight
 
     def get_random_seed(self):
         return self._random_seed
