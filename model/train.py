@@ -188,7 +188,7 @@ def train(rank: int = 0, cls_weights = None):
     is_save_weight = True
     init_epoch, freeze_epoch, freeze_batch_size, unfreeze_epoch, unfreeze_batch_size = config.get_epoch_param()
     unfreeze_flag = False
-    # freeze_train = config.freeze_train_enable() if pretrained_enable else False
+
     freeze_train = config.freeze_train_enable()
     if freeze_train:
         is_save_weight = False

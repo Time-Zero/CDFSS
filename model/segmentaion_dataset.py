@@ -35,6 +35,16 @@ class SegmentationDataset(Dataset):
         return self.length
 
     def __getitem__(self, index):
+        """
+
+        Args:
+            index:
+
+        Returns:
+            jpg: 经过数据增强处理后的图像张量
+            png: 未经处理的语义分割标签图像
+            seg_labels: 将 png 标签转换为one-hot编码后的多通道掩码，用于计算dice_loss和f_score
+        """
         annotation_line = self.annotation_lines[index]
         name = annotation_line.split()[0]
 

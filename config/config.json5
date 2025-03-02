@@ -2,7 +2,7 @@
     //  数据集参数
     dataset: {
         //    数据集位置
-        path: "./data/dataset/SS/CHASEDB1_VOC",
+        path: "./data/dataset/SS/Lung Segmentation_VOC",
         // 是否自动获取num_classes和name_classes，为true后num_classes和name_classes将无效
         auto_get_num_name: true,
         //    数据集中待划分种类（包含背景）
@@ -29,7 +29,7 @@
                 //        是否需要划分数据集
                 need_divide: true,
                 //        训练集占比
-                divide_percent: [0.7,0.2,0.1],
+                divide_percent: [0.1,0.4,0.5],
             },
             //      裁剪参数（针对过大的图片）
             random_crop: {
@@ -74,10 +74,10 @@
         num_workers: 4,
 
         //  模型规模
-        phi: 'b4',
+        phi: 'b2',
 
         //    输入模型的大小(w,h)
-        input_size: [512, 512],
+        input_size: [400, 400],
     },
     train: {
         //    启用fp16，这将减少内存占用，让部分无法训练的模型可以训练
@@ -101,9 +101,9 @@
             //  预训练参数加载模式：
 //                   backbone: 只加载主干网络,
 //                   full: 加载全局网络
-            weight: "backbone",
+            weight: "full",
             //  预训练参数路径
-            weight_path: "./data/weights/segformer_b4_backbone_weights.pth"
+            weight_path: "./data/weights/segformer_b2_weights_voc.pth"
         },
         //  选择优化器类型：adamw,adam,sgd(不推荐)
         optimizer_param: {
@@ -117,9 +117,9 @@
             enable: true,
             init_epoch: 0,
             freeze_epoch: 40,
-            freeze_batch_size: 4,
+            freeze_batch_size: 5,
             unfreeze_epoch: 80,
-            unfreeze_batch_size: 2
+            unfreeze_batch_size: 5
         },
         //  学习率参数
         lr_param: {
