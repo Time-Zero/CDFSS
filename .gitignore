@@ -8,3 +8,5 @@ results/*
 logs/*
 !logs/README.md
 tmp/
+**.pyc
+**/__pycache__/
