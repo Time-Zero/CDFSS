@@ -157,7 +157,7 @@ class ConfigReader:
         return self._weight_save_freq, os.path.normpath(self._weight_save_path)
 
     def get_log_dir(self):
-        return self._log_dir
+        return os.path.normpath(self._log_dir)
 
     def focal_loss_enable(self):
         return self._focal_loss

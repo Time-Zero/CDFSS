@@ -116,9 +116,9 @@
         freeze_train: {
             enable: true,
             init_epoch: 0,
-            freeze_epoch: 40,
+            freeze_epoch: 50,
             freeze_batch_size: 5,
-            unfreeze_epoch: 80,
+            unfreeze_epoch: 100,
             unfreeze_batch_size: 5
         },
         //  学习率参数

@@ -19,6 +19,7 @@ from model.loss_history import LossHistory
 from model.segformer import SegFormer
 from model.segmentaion_dataset import SegmentationDataset
 from utils.config_reader import ConfigReader
+from utils.utils_common import func_print
 from utils.utils_model import random_seed_init, get_lr_scheduler, seg_dataset_collate, worker_init_fn, set_optimizer_lr, \
     fit_one_epoch, compute_cls_weights_simple
 
@@ -102,9 +103,9 @@ def train(rank: int = 0, cls_weights = None):
         weight_mode, weight_path = config.get_pretrained_param()
 
         if weight_mode == 'backbone':
+            # 主干网络使用预训练权重
             if rank == 0:
                 print(f'主干网络将加载预训练权重: {os.path.basename(weight_path)}')
-            # 主干网络使用预训练权重
             model = SegFormer(num_classes=num_classes, phi=phi, pretrained=True, backbone_weight_path=weight_path)
         else:
             # 全局使用预训练权重
@@ -190,10 +191,12 @@ def train(rank: int = 0, cls_weights = None):
     unfreeze_flag = False
 
     freeze_train = config.freeze_train_enable()
-    if freeze_train:
-        is_save_weight = False
+    if freeze_train:                            # 使用冻结训练
+        is_save_weight = False                  # 在冻结阶段不保存权重，因为还没有微调backbone
         for param in model.backbone.parameters():
             param.requires_grad = False
+    else:                                       # 没有使用冻结训练
+        unfreeze_flag = True
 
     batch_size = freeze_batch_size if config.freeze_train_enable() else unfreeze_batch_size
 
@@ -247,16 +250,21 @@ def train(rank: int = 0, cls_weights = None):
                          worker_init_fn=partial(worker_init_fn, rank=rank, seed=random_seed))
 
     weight_save_freq, weight_save_path = config.get_weight_save_param()
-    if os.path.exists(weight_save_path):
-        shutil.rmtree(weight_save_path)
+    try:
+        if os.path.exists(weight_save_path):
+            shutil.rmtree(weight_save_path)
+    except FileNotFoundError as e:
+        func_print('red', 0, f'删除权重缓存失败: {e}')
 
     if cuda_enable and gpu_count > 1:
         dist.barrier()
 
+
     for epoch in range(init_epoch, unfreeze_epoch):
         # 当进入解冻阶段，重新设置参数
-        if epoch >= freeze_epoch and not unfreeze_flag and freeze_train:
+        if epoch >= freeze_epoch and not unfreeze_flag:
             if not is_save_weight:
+                # 进入解冻阶段，可以保存权重了
                 is_save_weight = True
 
             batch_size = unfreeze_batch_size
