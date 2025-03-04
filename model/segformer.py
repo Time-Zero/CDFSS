@@ -52,13 +52,19 @@ class Decoder(nn.Module):
         # (b, c, 32, 32) -> (b, 1024, embed) -> (b, embed, 1024) -> (b, embed, 32, 32)
         _c4 = self.linear_c4(c4).permute(0, 2, 1).contiguous().reshape(n, -1, c4.shape[2], c4.shape[3])
         # (b, embed, 32, 32) -> (b, embed, 128, 128)
-        _c4 = F.interpolate(_c4, size=c1.size()[2:], mode='bilinear', align_corners=False)
+        # _c4 = F.interpolate(_c4, size=c1.size()[2:], mode='bilinear', align_corners=False)
+        _c4 = F.interpolate(_c4, size=c1.size()[2:], mode='bicubic', align_corners=False)
+        _c4.clamp(min=0, max=255)
 
         _c3 = self.linear_c3(c3).permute(0, 2, 1).contiguous().reshape(n, -1, c3.shape[2], c3.shape[3])
-        _c3 = F.interpolate(_c3, size=c1.size()[2:], mode='bilinear', align_corners=False)
+        # _c3 = F.interpolate(_c3, size=c1.size()[2:], mode='bilinear', align_corners=False)
+        _c3 = F.interpolate(_c3, size=c1.size()[2:], mode='bicubic', align_corners=False)
+        _c3.clamp(min=0, max=255)
 
         _c2 = self.linear_c2(c2).permute(0, 2, 1).contiguous().reshape(n, -1, c2.shape[2], c2.shape[3])
-        _c2 = F.interpolate(_c2, size=c1.size()[2:], mode='bilinear', align_corners=False)
+        # _c2 = F.interpolate(_c2, size=c1.size()[2:], mode='bilinear', align_corners=False)
+        _c2 = F.interpolate(_c2, size=c1.size()[2:], mode='bicubic', align_corners=False)
+        _c2.clamp(min=0, max=255)
 
         _c1 = self.linear_c1(c1).permute(0, 2, 1).contiguous().reshape(n, -1, c1.shape[2], c1.shape[3])
 
