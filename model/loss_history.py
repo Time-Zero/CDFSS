@@ -30,7 +30,6 @@ class LossHistory:
             self.writer.add_graph(model, dummy_input)
         except:
             print(Fore.RED + "LossHistory模块生成模型结构失败" + Style.RESET_ALL)
-            pass
 
     def append_loss(self, epoch, loss, f_score):
         """
