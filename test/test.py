@@ -1,11 +1,24 @@
-import torch
-
-from model.segformer import SegFormer
-from model.IFA_matching import IFA_MatchingNet
-
-if __name__ == '__main__':
-    model_file_path = '/home/ymc/CDFSS/data/weights/segformer_b0_weights_voc.pth'
-    segformer_model = SegFormer()
-    segformer_model.load_state_dict(torch.load(model_file_path, weights_only=True), strict=False)
-
-    ifa_model = IFA_MatchingNet(segformer_model)
+# import psutil
+#
+# def is_program_running(target_name):
+#     for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+#         try:
+#             # 检查是否是Python进程，且命令行包含目标名称
+#             if 'python' in proc.info['name'].lower():
+#                 cmdline = proc.info['cmdline']
+#                 if len(cmdline) >= 1 and target_name in cmdline:
+#                     # 排除当前进程自身
+#                     print(cmdline)
+#                     if proc.pid != psutil.Process().pid:
+#                         return True
+#         except (psutil.NoSuchProcess, psutil.AccessDenied):
+#             continue
+#     return False
+#
+#
+#
+# if __name__ == '__main__':
+#     if is_program_running('hello.py'):
+#         print("程序正在运行")
+#     else:
+#         print("程序未运行")

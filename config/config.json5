@@ -43,7 +43,7 @@
         },
               //    全局灰度图片颜色设置
         color: {
-            //      是否对灰度图片进行自动色彩映射
+            //      自动灰度映射调色板
             auto_color: true,
             //      不同类的灰度映射到的颜色（如果不采用自动色彩映射）
             colors_map: [
@@ -53,7 +53,7 @@
                 [255, 0, 0],
             ]
         },
-        //    如果数据集不均衡，手动设置cls_weight,
+        //    数据集权重均衡
         cls_weights: {
             enable: true,
         }
@@ -136,6 +136,7 @@
     pred: {
         cuda: true,
         save_path: "./results/predict_out",
+        // 推理使用的模型，可选择best_val_loss和best_f_score
         model_path: "./results/saved_weight/best_weight/best_val_loss.pth",
 //        model_path: ".\\results\\saved_weight\\best_weight\\best_val_f_score.pth",
         out_color: true,

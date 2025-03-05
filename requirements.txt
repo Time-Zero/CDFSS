@@ -11,3 +11,4 @@ scipy~=1.15.2
 json5~=0.10.0
 joblib~=1.4.2
 django~=5.1.6
+psutil~=7.0.0
