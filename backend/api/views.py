@@ -3,7 +3,7 @@ import os.path
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
-from utils.util import *
+from utils import *
 import json
 
 
@@ -15,12 +15,8 @@ def view_is_train_running(request):
     train_file_name = 'cdfss.py'
     try:
         ret = is_program_running(train_file_name)
-        if ret:
-            response['err_code'] = 0
-            response['msg'] = 'True'
-        else:
-            response['err_code'] = 0
-            response['msg'] = 'False'
+        response['err_code'] = 0
+        response['msg'] = str(ret)
     except Exception as e:
         response['err_code'] = 1
         response['msg'] = str(e)
@@ -74,8 +70,9 @@ def view_upload_form(request):
         with open(config_save_path, "w", encoding='utf-8') as f:
             json.dump(config_content, f, ensure_ascii=False )
 
+        pid = launch_detached_script()
         response["err_code"] = 0
-        response["msg"] = ""
+        response["msg"] = f"{str(pid)}"
     except Exception as e:
         response['err_code'] = 1
         response['msg'] = str(e)
