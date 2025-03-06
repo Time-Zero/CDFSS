@@ -78,3 +78,84 @@ def view_upload_form(request):
         response['msg'] = str(e)
 
     return JsonResponse(response)
+
+@require_http_methods(["GET"])
+def view_get_logs_list(request):
+    response = {}
+    try:
+        logs_list = get_logs_list()
+        response['err_code'] = 0
+        response['msg'] = logs_list
+    except Exception as e:
+        response['err_code'] = 1
+        response['msg'] = str(e)
+
+    return JsonResponse(response)
+
+@require_http_methods(["GET"])
+def view_is_tensorboard_running(request):
+    response = {}
+    try:
+        pid = target_port_used(6006)
+        if pid == -1:
+            response['err_code'] = 0
+            response['msg'] = "False"
+        else:
+            response['err_code'] = 0
+            response['msg'] = "True"
+    except Exception as e:
+        response['err_code'] = 1
+        response['msg'] = str(e)
+
+    return JsonResponse(response)
+
+@require_http_methods(["GET"])
+def view_start_tensorboard(request):
+    response = {}
+    try:
+        res = start_tensorboard()
+        if res:
+            response['err_code'] = 0
+            response['msg'] = "True"
+        else:
+            response['err_code'] = 0
+            response['msg'] = "False"
+    except Exception as e:
+        response['err_code'] = 1
+        response['msg'] = str(e)
+
+    return JsonResponse(response)
+
+@require_http_methods(["GET"])
+def view_end_tensorboard(request):
+    response = {}
+    try:
+        res = kill_process_on_port(6006)
+        if res:
+            response['err_code'] = 0
+            response['msg'] = "True"
+        else:
+            response['err_code'] = 0
+            response['msg'] = "False"
+    except Exception as e:
+        response['err_code'] = 1
+        response['msg'] = str(e)
+
+    return JsonResponse(response)
+
+@require_http_methods(["GET"])
+def view_end_training(request):
+    response = {}
+    try:
+        res = end_training()
+        if res:
+            response['err_code'] = 0
+            response['msg'] = "True"
+        else:
+            response['err_code'] = 0
+            response['msg'] = "False"
+    except Exception as e:
+        response['err_code'] = 1
+        response['msg'] = str(e)
+
+    return JsonResponse(response)

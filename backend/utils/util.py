@@ -104,7 +104,94 @@ def launch_detached_script():
     os.chdir(cur_dir)
     return proc.pid
 
+def get_logs_list():
+    logs_dir = "../logs"
+    res = []
+    logs_list = os.listdir(logs_dir)
+    for log_name in logs_list:
+        if os.path.isdir(os.path.join(logs_dir, log_name)):
+            res.append(log_name)
+
+    return res
+
+def start_tensorboard():
+    """
+    以独立终端的方式启动TensorBoard
+    Returns:
+        pid(int): 返回TensorBoard进程的pid
+    """
+
+    cmd = 'tensorboard --logdir=../logs --port=6006 --host=0.0.0.0'
+    try:
+        # 日志文件配置
+        log_file = "tensorboard.log"  # 修改日志文件名
+        # 以追加模式打开文件，并启用行缓冲
+        with open(log_file, "a", buffering=1) as f:  # buffering=1 表示行缓冲
+            if sys.platform.startswith('win'):
+                # Windows: 创建新进程组并重定向输出
+                proc = subprocess.Popen(
+                    cmd,
+                    shell=True,
+                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
+                    stdout=f,
+                    stderr=subprocess.STDOUT,
+                    stdin=subprocess.DEVNULL
+                )
+            else:
+                # Unix: 创建新会话并重定向输出
+                proc = subprocess.Popen(
+                    cmd,
+                    shell=True,
+                    start_new_session=True,
+                    stdout=f,
+                    stderr=subprocess.STDOUT,
+                    stdin=subprocess.DEVNULL
+                )
+        return True
+    except Exception as e:
+        return False
+
+def target_port_used(port):
+    """
+    查询指定端口有没有被占用
+    Args:
+        port:
+        要查询的端口
+    Returns:
+        被占用则返回占用进程的pid，没有被占用则返回-1
+    """
+    try:
+        for conn in psutil.net_connections():
+            if conn.laddr.port == port and conn.status == 'LISTEN':
+                return conn.pid
+        return -1
+    except Exception as e:
+        return -1
+
+
+def kill_process_on_port(port):
+    try:
+        pid = target_port_used(port)
+        if pid == -1:
+            return False
+        else:
+            p = psutil.Process(pid)
+            p.terminate()
+            return True
+
+    except Exception as e:
+        return False
+
+def end_training():
+    pid = is_program_running('cdfss.py')
+    if pid != 0:
+        p = psutil.Process(pid)
+        p.terminate()
+        return True
+    return False
 
 if __name__ == '__main__':
-    # start_train()
+    # print(get_logs_list())
+    # start_tensorboard()
+    kill_process_on_port(6006)
     pass
