@@ -2,7 +2,7 @@
     //  数据集参数
     dataset: {
         //    数据集位置
-        path: "./data/dataset/SS/Lung Segmentation_VOC",
+        path: "./data/dataset/Lung Segmentation_VOC",
         // 是否自动获取num_classes和name_classes，为true后num_classes和name_classes将无效
         auto_get_num_name: true,
         //    数据集中待划分种类（包含背景）
