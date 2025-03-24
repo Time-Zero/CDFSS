@@ -1,0 +1,57 @@
+no change     /home/ymc/miniconda3/condabin/conda
+no change     /home/ymc/miniconda3/bin/conda
+no change     /home/ymc/miniconda3/bin/conda-env
+no change     /home/ymc/miniconda3/bin/activate
+no change     /home/ymc/miniconda3/bin/deactivate
+no change     /home/ymc/miniconda3/etc/profile.d/conda.sh
+no change     /home/ymc/miniconda3/etc/fish/conf.d/conda.fish
+no change     /home/ymc/miniconda3/shell/condabin/Conda.psm1
+no change     /home/ymc/miniconda3/shell/condabin/conda-hook.ps1
+no change     /home/ymc/miniconda3/lib/python3.12/site-packages/xontrib/conda.xsh
+no change     /home/ymc/miniconda3/etc/profile.d/conda.csh
+no change     /home/ymc/.bashrc
+No action taken.
+
+CondaError: Run 'conda init' before 'conda activate'
+
+TensorFlow installation not found - running with reduced feature set.
+
+NOTE: Using experimental fast data loading logic. To disable, pass
+    "--load_fast=false" and report issues on GitHub. More details:
+    https://github.com/tensorflow/tensorboard/issues/4784
+
+Serving TensorBoard on localhost; to expose to the network, use a proxy or pass --bind_all
+TensorBoard 2.19.0 at http://localhost:6006/ (Press CTRL+C to quit)
+Killed
+TensorFlow installation not found - running with reduced feature set.
+
+NOTE: Using experimental fast data loading logic. To disable, pass
+    "--load_fast=false" and report issues on GitHub. More details:
+    https://github.com/tensorflow/tensorboard/issues/4784
+
+TensorBoard 2.19.0 at http://0.0.0.0:6006/ (Press CTRL+C to quit)
+Killed
+TensorFlow installation not found - running with reduced feature set.
+
+NOTE: Using experimental fast data loading logic. To disable, pass
+    "--load_fast=false" and report issues on GitHub. More details:
+    https://github.com/tensorflow/tensorboard/issues/4784
+
+TensorBoard 2.19.0 at http://0.0.0.0:6006/ (Press CTRL+C to quit)
+Killed
+TensorFlow installation not found - running with reduced feature set.
+
+NOTE: Using experimental fast data loading logic. To disable, pass
+    "--load_fast=false" and report issues on GitHub. More details:
+    https://github.com/tensorflow/tensorboard/issues/4784
+
+TensorBoard 2.19.0 at http://0.0.0.0:6006/ (Press CTRL+C to quit)
+Killed
+TensorFlow installation not found - running with reduced feature set.
+
+NOTE: Using experimental fast data loading logic. To disable, pass
+    "--load_fast=false" and report issues on GitHub. More details:
+    https://github.com/tensorflow/tensorboard/issues/4784
+
+TensorBoard 2.19.0 at http://0.0.0.0:6006/ (Press CTRL+C to quit)
+TensorBoard caught SIGTERM; exiting...
