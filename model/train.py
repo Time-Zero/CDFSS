@@ -58,6 +58,15 @@ def train_controller():
             train(0, cls_weights)
 
 def train(rank: int = 0, cls_weights = None):
+    """
+    训练线程子函数
+    Args:
+        rank: 训练任务中的进程号
+        cls_weights: 偏置权重
+
+    Returns:
+
+    """
     config = ConfigReader()
     config.mp_reload_config()
     num_classes = config.get_num_classes()

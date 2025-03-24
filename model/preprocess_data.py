@@ -6,6 +6,11 @@ from utils.utils_dataset import *
 
 
 def preprocess_data():
+    """
+    数据预处理
+    Returns:
+
+    """
     config = ConfigReader()
 
     dataset_path = config.get_dataset_path()

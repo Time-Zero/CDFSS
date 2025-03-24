@@ -14,6 +14,11 @@ from utils.utils_predict import compute_miou, show_results
 
 
 def predict():
+    """
+    推理模块
+    Returns:
+
+    """
     config = ConfigReader()
 
     need_color = config.pre_out_color()

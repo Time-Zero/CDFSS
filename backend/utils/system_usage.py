@@ -3,6 +3,11 @@ import pynvml
 
 
 def get_system_usage():
+    """
+    获取系统信息对应的使用率，返回cpu使用率，内存使用率等
+    Returns:
+
+    """
     cpu_percent = psutil.cpu_percent(interval=0.5) / 100
     mem = psutil.virtual_memory()
     mem_percent = mem.percent / 100

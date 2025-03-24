@@ -1,8 +1,8 @@
-import psutil
 import os
 import subprocess
-import platform
 import sys
+
+import psutil
 
 
 def is_program_running(target_name):
@@ -48,6 +48,11 @@ def get_dataset_list():
 
 
 def get_weight_list():
+    """
+    获取权重文件列表
+    Returns:
+
+    """
     weights_dir = "../data/weights"
     try:
         res = []
@@ -105,6 +110,11 @@ def launch_detached_script():
     return proc.pid
 
 def get_logs_list():
+    """
+    获取日志文件列表
+    Returns:
+
+    """
     logs_dir = "../logs"
     res = []
     logs_list = os.listdir(logs_dir)
@@ -170,6 +180,14 @@ def target_port_used(port):
 
 
 def kill_process_on_port(port):
+    """
+    杀死占用指定端口的进程
+    Args:
+        port: 占用的端口
+
+    Returns:
+
+    """
     try:
         pid = target_port_used(port)
         if pid == -1:
@@ -183,6 +201,11 @@ def kill_process_on_port(port):
         return False
 
 def end_training():
+    """
+    结束训练，对应前端结束训练功能；杀死训练对应进程
+    Returns:
+
+    """
     pid = is_program_running('cdfss.py')
     if pid != 0:
         p = psutil.Process(pid)

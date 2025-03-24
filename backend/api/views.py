@@ -11,6 +11,14 @@ import json
 # Create your views here.
 @require_http_methods(["GET"])
 def view_is_train_running(request):
+    """
+    是否正在训练
+    Args:
+        request:
+
+    Returns:
+
+    """
     response = {}
     train_file_name = 'cdfss.py'
     try:
@@ -24,6 +32,14 @@ def view_is_train_running(request):
 
 @require_http_methods(["GET"])
 def view_get_dataset_list(request):
+    """
+    获取数据集列表
+    Args:
+        request:
+
+    Returns:
+
+    """
     response = {}
     try:
         ret = get_dataset_list()
@@ -41,6 +57,14 @@ def view_get_dataset_list(request):
 
 @require_http_methods(["GET"])
 def view_get_weight_list(request):
+    """
+    获取权重列表
+    Args:
+        request:
+
+    Returns:
+
+    """
     response = {}
     try:
         ret = get_weight_list()
@@ -58,6 +82,14 @@ def view_get_weight_list(request):
 
 @require_http_methods(["POST"])
 def view_upload_form(request):
+    """
+    配置文件上传之后的逻辑
+    Args:
+        request:
+
+    Returns:
+
+    """
     config_save_path = "../config/temp.json"
     response = {}
 
@@ -81,6 +113,14 @@ def view_upload_form(request):
 
 @require_http_methods(["GET"])
 def view_get_logs_list(request):
+    """
+    获取日志列表
+    Args:
+        request:
+
+    Returns:
+
+    """
     response = {}
     try:
         logs_list = get_logs_list()
@@ -94,6 +134,14 @@ def view_get_logs_list(request):
 
 @require_http_methods(["GET"])
 def view_is_tensorboard_running(request):
+    """
+    tensorboard是否正在运行
+    Args:
+        request:
+
+    Returns:
+
+    """
     response = {}
     try:
         pid = target_port_used(6006)
@@ -111,6 +159,14 @@ def view_is_tensorboard_running(request):
 
 @require_http_methods(["GET"])
 def view_start_tensorboard(request):
+    """
+    启动tensorboard
+    Args:
+        request:
+
+    Returns:
+
+    """
     response = {}
     try:
         res = start_tensorboard()
@@ -128,6 +184,14 @@ def view_start_tensorboard(request):
 
 @require_http_methods(["GET"])
 def view_end_tensorboard(request):
+    """
+    结束tensorboard
+    Args:
+        request:
+
+    Returns:
+
+    """
     response = {}
     try:
         res = kill_process_on_port(6006)
@@ -145,6 +209,14 @@ def view_end_tensorboard(request):
 
 @require_http_methods(["GET"])
 def view_end_training(request):
+    """
+    结束训练
+    Args:
+        request:
+
+    Returns:
+
+    """
     response = {}
     try:
         res = end_training()
